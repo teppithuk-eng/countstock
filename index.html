@@ -203,7 +203,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -477,7 +477,7 @@
     </div>
   </div>
 
-  <!-- 📷 หน้าต่างสแกนเนอร์มาตรฐานสากล พร้อมช่องพิมพ์รหัสด้วยมือ + Quick Add -->
+  <!-- 📷 หน้าต่างสแกนเนอร์มาตรฐานสากล พร้อมช่องพิมพ์รหัส + แสดงยอดระบบและยอดนับคู่กัน -->
   <div id="scannerModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex flex-col items-center justify-between p-3 sm:p-5 hidden">
     <!-- ส่วนหัวหน้าต่างกล้อง -->
     <div class="w-full max-w-md flex justify-between items-center text-white pb-2 border-b border-white/10">
@@ -508,7 +508,12 @@
         </button>
       </div>
 
-      <!-- การ์ดยืนยันยอดสินค้า พร้อม Quick Add (+5, +10) -->
+      <!-- แถบป้ายแจ้งเตือนการสแกนล่าสุด (Status Badge) -->
+      <div id="scanStatusNotification" class="w-full mb-1.5 text-center text-[11px] font-bold py-1 px-3 rounded-lg bg-emerald-500 text-white shadow-sm hidden">
+        ✓ สแกนสำเร็จ: <span id="notificationCodeText"></span>
+      </div>
+
+      <!-- การ์ดยืนยันยอดสินค้า พร้อมแสดงยอดระบบคู่กับยอดนับจริง และ Quick Add -->
       <div id="scannedFeedbackCard" class="w-full bg-white rounded-2xl p-3 shadow-2xl border border-slate-200 transition-all transform duration-150">
         <div class="flex justify-between items-start mb-2">
           <div class="flex-1 mr-2 truncate">
@@ -518,32 +523,39 @@
           <span id="scanCardUom" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200 uppercase">EA</span>
         </div>
 
-        <!-- แถวยอดของดี พร้อม Quick Add (+5, +10) -->
-        <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 mb-2">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-700">📦 ยอดนับจริง:</span>
-            <div class="flex items-center gap-1">
-              <button onclick="adjustScannedItemQty(-1)" class="w-8 h-8 bg-white border border-slate-300 rounded-lg font-black text-base active:bg-slate-100 shadow-xs">-</button>
-              <input type="number" id="scanCardQtyInput" min="0" oninput="directUpdateScannedQty(this.value)" class="w-16 h-8 text-center text-lg font-black text-orange-600 mono-num border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-orange-500 shadow-inner">
-              <button onclick="adjustScannedItemQty(1)" class="w-8 h-8 bg-white border border-slate-300 rounded-lg font-black text-base active:bg-slate-100 shadow-xs">+</button>
-            </div>
+        <!-- แถบเปรียบเทียบยอดระบบ vs ยอดนับจริง -->
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <!-- กล่องยอดระบบ -->
+          <div class="bg-slate-100 border border-slate-200 rounded-xl p-2 text-center">
+            <span class="text-[10px] font-bold text-slate-500 uppercase block">ยอดระบบ (Snapshot)</span>
+            <span id="scanCardSysQty" class="text-lg font-black text-slate-800 mono-num">0</span>
           </div>
 
-          <!-- แถบปุ่ม Quick Add เร่งสปีด -->
-          <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-orange-200/60">
-            <button onclick="adjustScannedItemQty(5)" class="bg-white hover:bg-orange-100 active:bg-orange-200 border border-orange-300 text-orange-700 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
-              +5
-            </button>
-            <button onclick="adjustScannedItemQty(10)" class="bg-white hover:bg-orange-100 active:bg-orange-200 border border-orange-300 text-orange-700 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
-              +10
-            </button>
-            <button onclick="adjustScannedItemQty(20)" class="bg-white hover:bg-orange-100 active:bg-orange-200 border border-orange-300 text-orange-700 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
-              +20
-            </button>
-            <button onclick="matchScannedItemSystem()" title="ดึงยอดเท่ากับระบบ" class="bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-300 text-emerald-800 font-bold py-1 rounded-lg text-xs shadow-xs transition">
-              =ระบบ
-            </button>
+          <!-- กล่องยอดนับจริง (ปรับยอดได้ตรงนี้) -->
+          <div class="bg-orange-50 border border-orange-200 rounded-xl p-2 text-center">
+            <span class="text-[10px] font-bold text-orange-700 uppercase block">ยอดนับจริง (หน้างาน)</span>
+            <div class="flex items-center justify-center gap-1 mt-0.5">
+              <button onclick="adjustScannedItemQty(-1)" class="w-7 h-7 bg-white border border-slate-300 rounded-md font-black text-sm active:bg-slate-100 shadow-xs">-</button>
+              <input type="number" id="scanCardQtyInput" min="0" oninput="directUpdateScannedQty(this.value)" class="w-14 h-7 text-center text-base font-black text-orange-600 mono-num border border-slate-300 rounded-md bg-white focus:outline-none focus:border-orange-500 shadow-inner">
+              <button onclick="adjustScannedItemQty(1)" class="w-7 h-7 bg-white border border-slate-300 rounded-md font-black text-sm active:bg-slate-100 shadow-xs">+</button>
+            </div>
           </div>
+        </div>
+
+        <!-- แถบปุ่ม Quick Add (+1, +5, +10, =ระบบ) เร่งสปีด -->
+        <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-200 mb-2.5">
+          <button onclick="adjustScannedItemQty(1)" class="bg-slate-50 hover:bg-orange-50 active:bg-orange-100 border border-slate-300 text-slate-800 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
+            +1
+          </button>
+          <button onclick="adjustScannedItemQty(5)" class="bg-slate-50 hover:bg-orange-50 active:bg-orange-100 border border-slate-300 text-slate-800 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
+            +5
+          </button>
+          <button onclick="adjustScannedItemQty(10)" class="bg-slate-50 hover:bg-orange-50 active:bg-orange-100 border border-slate-300 text-slate-800 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
+            +10
+          </button>
+          <button onclick="matchScannedItemSystem()" title="ดึงยอดเท่ากับระบบทันที" class="bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-300 text-emerald-800 font-bold py-1 rounded-lg text-xs shadow-xs transition">
+            =ระบบ
+          </button>
         </div>
 
         <div class="flex gap-2">
@@ -815,7 +827,7 @@
     }
 
     // ==========================================
-    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (แก้เสียงแตกซ่า 100%)
     // ==========================================
     let isAudioUnlocked = false;
     let audioCtx = null;
@@ -839,6 +851,7 @@
     window.addEventListener('touchstart', unlockAudioEngine, { once: true });
     window.addEventListener('click', unlockAudioEngine, { once: true });
 
+    // 1. เสียงตี๊ดสำเร็จ (คลื่น Sine ใส นุ่มนวล ไม่แตกซ่า)
     function playSuccessBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -853,15 +866,17 @@
         osc.type = "sine";
         osc.frequency.setValueAtTime(880, now);
         
-        gain.gain.setValueAtTime(0.01, now);
-        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+        // ใช้ Linear Ramp นุ่มนวล ตัดเสียงแตก
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+        gain.gain.linearRampToValueAtTime(0, now + 0.22);
         
         osc.start(now);
-        osc.stop(now + 0.32);
+        osc.stop(now + 0.24);
       } catch(e) {}
     }
 
+    // 2. เสียงเตือนข้อผิดพลาด (นุ่ม ไม่บาดหู)
     function playErrorBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -874,27 +889,28 @@
         osc1.connect(gain1);
         gain1.connect(audioCtx.destination);
         osc1.type = "sine";
-        osc1.frequency.setValueAtTime(330, now);
-        gain1.gain.setValueAtTime(0.01, now);
-        gain1.gain.exponentialRampToValueAtTime(0.3, now + 0.03);
-        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc1.frequency.setValueAtTime(320, now);
+        gain1.gain.setValueAtTime(0, now);
+        gain1.gain.linearRampToValueAtTime(0.15, now + 0.02);
+        gain1.gain.linearRampToValueAtTime(0, now + 0.18);
         osc1.start(now);
-        osc1.stop(now + 0.27);
+        osc1.stop(now + 0.20);
 
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.connect(gain2);
         gain2.connect(audioCtx.destination);
         osc2.type = "sine";
-        osc2.frequency.setValueAtTime(330, now + 0.35);
-        gain2.gain.setValueAtTime(0.01, now + 0.35);
-        gain2.gain.exponentialRampToValueAtTime(0.3, now + 0.38);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.60);
-        osc2.start(now + 0.35);
-        osc2.stop(now + 0.62);
+        osc2.frequency.setValueAtTime(320, now + 0.25);
+        gain2.gain.setValueAtTime(0, now + 0.25);
+        gain2.gain.linearRampToValueAtTime(0.15, now + 0.27);
+        gain2.gain.linearRampToValueAtTime(0, now + 0.43);
+        osc2.start(now + 0.25);
+        osc2.stop(now + 0.45);
       } catch(e) {}
     }
 
+    // 3. ฟังก์ชันขานเสียงตัวเลขภาษาไทย
     function speakText(text) {
       try {
         if (!('speechSynthesis' in window)) return;
@@ -2011,6 +2027,7 @@
         
         speakText(currentCount);
         updateFeedbackCard(currentItems[idx]);
+        showScanNotification(currentItems[idx].itemCode, currentItems[idx].itemName);
         autoSaveDraft();
         return;
       }
@@ -2069,6 +2086,7 @@
 
       lastScannedItemIndex = currentItems.findIndex(i => i.itemCode === masterItemCode);
       updateFeedbackCard(currentItems[lastScannedItemIndex]);
+      showScanNotification(masterItemCode, foundInMaster.name);
       autoSaveDraft();
     }
 
@@ -2089,10 +2107,31 @@
       document.getElementById("manualScanInput").focus();
     }
 
+    // แสดงการแจ้งเตือนสแกน/พิมพ์สำเร็จแบบเห็นชัดเจน ไม่หายไปไหน
+    function showScanNotification(code, name) {
+      const notif = document.getElementById("scanStatusNotification");
+      const notifText = document.getElementById("notificationCodeText");
+      if (notif && notifText) {
+        notifText.innerText = `${code} - ${name} (+1)`;
+        notif.classList.remove("hidden");
+      }
+    }
+
+    // อัปเดตการ์ดแสดงผล ทั้งยอดระบบ และยอดนับจริง
     function updateFeedbackCard(item) {
+      const packSize = Number(item.packSize) || 1;
+      const isEA = packSize <= 1;
+      const sysParsed = parseStockValue(item.sysStock, packSize);
+
       document.getElementById("scanCardCode").innerText = item.itemCode;
       document.getElementById("scanCardName").innerText = item.itemName;
       document.getElementById("scanCardUom").innerText = item.uom || 'EA';
+
+      // แสดงยอดระบบที่แท้จริง
+      const sysDisplay = isEA ? `${sysParsed.box} EA` : `${sysParsed.box} กล่อง` + (sysParsed.pcs > 0 ? ` +${sysParsed.pcs}ชิ้น` : "");
+      document.getElementById("scanCardSysQty").innerText = sysDisplay;
+
+      // แสดงยอดนับจริง
       document.getElementById("scanCardQtyInput").value = item.actBox || 0;
     }
 

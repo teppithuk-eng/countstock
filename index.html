@@ -148,6 +148,14 @@
       </div>
     </div>
 
+    <!-- แถบแจ้งเตือนผลต่างขาดทุนวิกฤติ (Critical Threshold Warning) -->
+    <div id="criticalThresholdAlert" class="hidden mb-3 bg-rose-600 text-white rounded-2xl p-2.5 sm:p-3 flex items-center justify-between shadow-md animate-pulse">
+      <div class="flex items-center gap-2 text-xs sm:text-sm font-bold">
+        <span class="text-lg">🚨</span>
+        <span>แจ้งเตือนสต๊อกขาดทุนสูงผิดปกติ: ผลต่างติดลบเกินกำหนด (<span id="criticalDiffText" class="underline font-black">0.00 ฿</span>)</span>
+      </div>
+    </div>
+
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
@@ -195,7 +203,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -247,7 +255,7 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง -->
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (แสดงยอดเงินชัดเจน และใช้คำว่า "หน่วย" ทั้งหมด) -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
@@ -468,22 +476,28 @@
     </div>
   </div>
 
-  <!-- 📷 หน้าต่างสแกนเนอร์มาตรฐานสากล (Scan & Acknowledge Modal) -->
+  <!-- 📷 หน้าต่างสแกนเนอร์มาตรฐานสากล พร้อมปุ่มไฟฉายและแยกถังชำรุด -->
   <div id="scannerModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex flex-col items-center justify-between p-3 sm:p-5 hidden">
-    <!-- ส่วนหัว -->
+    <!-- ส่วนหัวหน้าต่างกล้อง -->
     <div class="w-full max-w-md flex justify-between items-center text-white pb-2 border-b border-white/10">
       <div class="flex items-center gap-2">
         <span class="text-base">📷</span>
         <span class="text-xs sm:text-sm font-bold">เล็งบาร์โค้ดสินค้าในกรอบ</span>
       </div>
-      <button onclick="toggleScannerModal()" class="text-white/70 hover:text-white text-2xl font-bold px-2">&times;</button>
+      <div class="flex items-center gap-2">
+        <!-- ปุ่มเปิด/ปิดไฟฉายในที่มืด -->
+        <button id="torchToggleBtn" onclick="toggleTorchLight()" class="text-xs font-bold bg-white/20 hover:bg-white/30 text-amber-300 px-2.5 py-1 rounded-xl transition flex items-center gap-1 border border-white/20">
+          💡 <span>ไฟฉาย: ปิด</span>
+        </button>
+        <button onclick="toggleScannerModal()" class="text-white/70 hover:text-white text-2xl font-bold px-2">&times;</button>
+      </div>
     </div>
 
-    <!-- กรอบกล้องขนาดกะทัดรัด (Compact Viewfinder) ไม่บังหน้าจอ -->
+    <!-- กรอบกล้องขนาดกะทัดรัด (Compact Viewfinder) -->
     <div class="w-full max-w-md my-auto flex flex-col items-center">
-      <div id="reader" class="overflow-hidden rounded-2xl border-2 border-orange-500 w-full max-h-52 bg-black shadow-lg"></div>
+      <div id="reader" class="overflow-hidden rounded-2xl border-2 border-orange-500 w-full max-h-48 bg-black shadow-lg"></div>
       
-      <!-- การ์ดยืนยันยอดสินค้าที่สแกนได้ล่าสุด (Scan Result Card) -->
+      <!-- การ์ดยืนยันยอดสินค้าที่สแกนได้ล่าสุด พร้อมแยกถังของเสีย/ชำรุด -->
       <div id="scannedFeedbackCard" class="w-full bg-white rounded-2xl p-3.5 mt-3 shadow-2xl border border-slate-200 transition-all transform duration-150">
         <div class="flex justify-between items-start mb-2">
           <div class="flex-1 mr-2 truncate">
@@ -493,12 +507,26 @@
           <span id="scanCardUom" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200 uppercase">EA</span>
         </div>
 
-        <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-700">ยอดที่นับสะสมได้:</span>
+        <!-- แถวยอดของดี -->
+        <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2 flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-slate-700">📦 ยอดนับสภาพดี:</span>
           <div class="flex items-center gap-1.5">
             <button onclick="adjustScannedItemQty(-1)" class="w-8 h-8 bg-white border border-slate-300 rounded-lg font-black text-base active:bg-slate-100 shadow-xs">-</button>
             <span id="scanCardQty" class="text-xl font-black text-orange-600 mono-num min-w-[45px] text-center">0</span>
             <button onclick="adjustScannedItemQty(1)" class="w-8 h-8 bg-white border border-slate-300 rounded-lg font-black text-base active:bg-slate-100 shadow-xs">+</button>
+          </div>
+        </div>
+
+        <!-- แถวแยกถังชำรุด/ของเสีย (Damaged/Defect Bucket) -->
+        <div class="bg-rose-50/70 border border-rose-200 rounded-xl p-2 flex items-center justify-between">
+          <div class="flex items-center gap-1 text-rose-800">
+            <span class="text-xs">⚠️</span>
+            <span class="text-[11px] font-bold">ของชำรุด/เสีย:</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="adjustScannedDamagedQty(-1)" class="w-7 h-7 bg-white border border-rose-300 rounded-lg font-black text-sm text-rose-700 active:bg-rose-50 shadow-xs">-</button>
+            <span id="scanCardDamagedQty" class="text-base font-black text-rose-600 mono-num min-w-[35px] text-center">0</span>
+            <button onclick="adjustScannedDamagedQty(1)" class="w-7 h-7 bg-white border border-rose-300 rounded-lg font-black text-sm text-rose-700 active:bg-rose-50 shadow-xs">+</button>
           </div>
         </div>
 
@@ -515,7 +543,7 @@
 
     <!-- ส่วนท้าย -->
     <div class="w-full max-w-md text-center text-[10px] text-white/50 pt-2">
-      สแกนแล้ว 1 ครั้ง ระบบจะหยุดกล้องเพื่อยืนยันยอดอัตโนมัติ
+      สแกนแล้ว 1 ครั้ง ระบบจะหยุดกล้องเพื่อยืนยันยอดและสั่นเตือนในมือ
     </div>
   </div>
 
@@ -743,6 +771,10 @@
     let isScanFrozen = false;
     let lastScannedItemIndex = -1;
 
+    // ระบบไฟฉาย (Torch)
+    let isTorchOn = false;
+    let videoTrack = null;
+
     let currentCountMode = 'table';
     let currentFocusIndex = 0;
 
@@ -750,6 +782,21 @@
     let originalAuditDate = "";
 
     const SESSION_DURATION = 12 * 60 * 60 * 1000;
+
+    // ==========================================
+    // 📳 HAPTIC FEEDBACK ENGINE (สั่นเตือนในมือ)
+    // ==========================================
+    function triggerHapticSuccess() {
+      try {
+        if ('vibrate' in navigator) navigator.vibrate(60); // สั่นสั้นสะกิดมือ 1 ครั้ง
+      } catch(e) {}
+    }
+
+    function triggerHapticError() {
+      try {
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]); // สั่นเตือนรัว 2 ครั้ง
+      } catch(e) {}
+    }
 
     // ==========================================
     // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE
@@ -860,6 +907,33 @@
         }, 120);
       } catch(e) {
         console.warn("Speech error:", e);
+      }
+    }
+
+    // ==========================================
+    // 💡 TORCH / FLASHLIGHT CONTROL
+    // ==========================================
+    async function toggleTorchLight() {
+      try {
+        if (!videoTrack) {
+          const videoElement = document.querySelector("#reader video");
+          if (videoElement && videoElement.srcObject) {
+            videoTrack = videoElement.srcObject.getVideoTracks()[0];
+          }
+        }
+        if (videoTrack && videoTrack.getCapabilities && videoTrack.getCapabilities().torch) {
+          isTorchOn = !isTorchOn;
+          await videoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+          const torchBtn = document.getElementById("torchToggleBtn");
+          torchBtn.innerHTML = isTorchOn ? "💡 <span>ไฟฉาย: เปิด</span>" : "💡 <span>ไฟฉาย: ปิด</span>";
+          torchBtn.className = isTorchOn 
+            ? "text-xs font-bold bg-amber-400 text-slate-900 px-2.5 py-1 rounded-xl transition flex items-center gap-1 shadow-sm"
+            : "text-xs font-bold bg-white/20 hover:bg-white/30 text-amber-300 px-2.5 py-1 rounded-xl transition flex items-center gap-1 border border-white/20";
+        } else {
+          alert("อุปกรณ์นี้หรือกล้องนี้ไม่รองรับการเปิดไฟฉายผ่านเว็บ");
+        }
+      } catch(err) {
+        console.warn("Torch error:", err);
       }
     }
 
@@ -1084,6 +1158,7 @@
           itemCode: i.itemCode,
           actBox: i.actBox,
           actPcs: i.actPcs,
+          damagedQty: i.damagedQty || 0,
           remark: i.remark,
           isExtra: i.isExtra
         }))
@@ -1120,6 +1195,7 @@
           if (target) {
             target.actBox = dItem.actBox;
             target.actPcs = dItem.actPcs;
+            target.damagedQty = dItem.damagedQty || 0;
             target.remark = dItem.remark;
           }
         });
@@ -1679,6 +1755,7 @@
       }
     }
 
+    // คำนวณสรุปยอดเงินและรวมหน่วยเต็ม (Units) พร้อมระบบตรวจจับ Threshold ขาดทุนรุนแรง
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
@@ -1723,9 +1800,11 @@
         }
       });
 
+      // ยอดเงิน
       document.getElementById("sumSysVal").innerText = totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
       document.getElementById("sumActVal").innerText = totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
 
+      // แสดงเป็นหน่วยเต็ม
       const sysQtyEl = document.getElementById("sumSysQty");
       if (sysQtyEl) {
         sysQtyEl.innerText = `รวม: ${totalSysUnits.toLocaleString()} หน่วย`;
@@ -1746,6 +1825,16 @@
       const diffCard = document.getElementById("diffCard");
       const sumDiffSpan = document.getElementById("sumDiffVal");
       sumDiffSpan.innerText = (totalDiffVal > 0 ? "+" : "") + totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+
+      // ตรวจจับ Threshold: หากขาดทุนเกิน 1,000 บาท ขึ้นแถบแดงเตือนทันที
+      const critAlert = document.getElementById("criticalThresholdAlert");
+      const critText = document.getElementById("criticalDiffText");
+      if (totalDiffVal < -1000) {
+        critText.innerText = totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+        critAlert.classList.remove("hidden");
+      } else {
+        critAlert.classList.add("hidden");
+      }
 
       if (Math.abs(totalDiffVal) < 0.01) {
         diffCard.className = "bg-emerald-50/60 border border-emerald-200 rounded-xl p-2.5 text-left";
@@ -1871,7 +1960,7 @@
     // 📷 SCAN & ACKNOWLEDGE ENGINE (มาตรฐานสากล)
     // ==========================================
     function processBarcodeCount(barcode) {
-      if (isScanFrozen) return; // หากล็อกไว้ ไม่ประมวลผลซ้ำเด็ดขาด
+      if (isScanFrozen) return;
 
       const cleanCode = barcode.trim().toUpperCase();
 
@@ -1881,19 +1970,16 @@
       );
 
       if (idx !== -1) {
-        // ล็อกกล้องทันทีที่เจอ
         freezeScanner();
         playSuccessBeep();
+        triggerHapticSuccess(); // สั่นเตือนผ่าน
         adjustBox(idx, 1);
         highlightRow(currentItems[idx].itemCode);
 
         lastScannedItemIndex = idx;
         const currentCount = currentItems[idx].actBox || 0;
         
-        // ขานตัวเลขทันที
         speakText(currentCount);
-        
-        // แสดงการ์ดข้อมูลสินค้าในหน้าต่างกล้อง
         updateFeedbackCard(currentItems[idx]);
         autoSaveDraft();
         return;
@@ -1920,15 +2006,17 @@
       if (!foundInMaster) {
         freezeScanner();
         playErrorBeep();
+        triggerHapticError(); // สั่นเตือนข้อผิดพลาด
         speakText("ไม่พบสินค้า");
         alert(`❌ ไม่พบข้อมูลในระบบ (Item Master)\n\nรหัส/บาร์โค้ด: "${cleanCode}"\nกรุณาตรวจเช็คกล่องสินค้า หรือแจ้งฝ่ายสต๊อกเพื่อเพิ่มสินค้าเข้าระบบ`);
-        resumeScanningNext(); // คืนสถานะให้ลองสแกนใหม่
+        resumeScanningNext();
         return;
       }
 
       // พบใน Master ดึงมาสร้างเป็นสินค้าเกิน
       freezeScanner();
       playSuccessBeep();
+      triggerHapticSuccess();
       currentItems.push({
         itemCode: masterItemCode,
         barcode: foundInMaster.barcode || cleanCode,
@@ -1940,6 +2028,7 @@
         sysStock: 0,
         actBox: 1,
         actPcs: 0,
+        damagedQty: 0,
         diffDecimal: 1,
         remark: "สินค้าเกินนอกระบบ",
         isExtra: true
@@ -1957,7 +2046,6 @@
       autoSaveDraft();
     }
 
-    // ล็อกกล้องและแสดงการ์ดยืนยันยอด
     function freezeScanner() {
       isScanFrozen = true;
       if (html5QrCode && html5QrCode.pause) {
@@ -1965,7 +2053,6 @@
       }
     }
 
-    // ปลดล็อกให้สแกนชิ้นต่อไป
     function resumeScanningNext() {
       isScanFrozen = false;
       if (html5QrCode && html5QrCode.resume) {
@@ -1975,21 +2062,38 @@
       setTimeout(() => document.getElementById("resumeScanBtn").classList.remove("animate-pulse"), 400);
     }
 
-    // อัปเดตข้อมูลการ์ดในกล้อง
     function updateFeedbackCard(item) {
       document.getElementById("scanCardCode").innerText = item.itemCode;
       document.getElementById("scanCardName").innerText = item.itemName;
       document.getElementById("scanCardUom").innerText = item.uom || 'EA';
       document.getElementById("scanCardQty").innerText = item.actBox || 0;
+      document.getElementById("scanCardDamagedQty").innerText = item.damagedQty || 0;
     }
 
-    // ปุ่มบวกลบตรงการ์ดยืนยันยอดในกล้อง
     function adjustScannedItemQty(delta) {
       if (lastScannedItemIndex === -1 || !currentItems[lastScannedItemIndex]) return;
       adjustBox(lastScannedItemIndex, delta);
       const newQty = currentItems[lastScannedItemIndex].actBox || 0;
       document.getElementById("scanCardQty").innerText = newQty;
+      triggerHapticSuccess();
       speakText(newQty);
+    }
+
+    // ปรับยอดสินค้าชำรุด/ของเสีย
+    function adjustScannedDamagedQty(delta) {
+      if (lastScannedItemIndex === -1 || !currentItems[lastScannedItemIndex]) return;
+      const item = currentItems[lastScannedItemIndex];
+      const curDamaged = Number(item.damagedQty) || 0;
+      const newDamaged = Math.max(0, curDamaged + delta);
+      item.damagedQty = newDamaged;
+      
+      if (newDamaged > 0 && !item.remark) {
+        item.remark = "ของจริงเสีย";
+      }
+      
+      document.getElementById("scanCardDamagedQty").innerText = newDamaged;
+      triggerHapticError();
+      autoSaveDraft();
     }
 
     function addExtraItem() {
@@ -2011,7 +2115,6 @@
     }
 
     async function toggleScannerModal() {
-      // หากอยู่ใน LINE App และรองรับ liff.scanCodeV2
       if (typeof liff !== "undefined" && liff.isLoggedIn && liff.isInClient && liff.isInClient()) {
         if (liff.scanCodeV2) {
           try {
@@ -2021,12 +2124,11 @@
             }
             return;
           } catch (err) {
-            console.warn("LIFF ScanCode error, falling back to camera modal:", err);
+            console.warn("LIFF ScanCode error:", err);
           }
         }
       }
 
-      // Fallback: ใช้หน้าต่างกล้องของระบบ
       const modal = document.getElementById("scannerModal");
       if (modal.classList.contains("hidden")) {
         modal.classList.remove("hidden");
@@ -2043,7 +2145,6 @@
       html5QrCode = new Html5Qrcode("reader");
       isScanning = true;
 
-      // ปรับขนาด Viewfinder ให้พอดี ไม่ใหญ่เกินไป
       const config = { 
         fps: 15, 
         qrbox: { width: 220, height: 140 } 
@@ -2059,7 +2160,13 @@
           }
         },
         () => {}
-      ).catch((err) => {
+      ).then(() => {
+        // จับ video track เตรียมไว้สำหรับระบบไฟฉาย
+        const videoElement = document.querySelector("#reader video");
+        if (videoElement && videoElement.srcObject) {
+          videoTrack = videoElement.srcObject.getVideoTracks()[0];
+        }
+      }).catch((err) => {
         isScanning = false;
         alert("ไม่สามารถเปิดกล้องได้: " + err);
       });
@@ -2067,12 +2174,15 @@
 
     function stopScanner() {
       if (html5QrCode && isScanning) {
+        if (isTorchOn) toggleTorchLight(); // ปิดไฟฉายอัตโนมัติ
         html5QrCode.stop().then(() => {
           isScanning = false;
           isScanFrozen = false;
+          videoTrack = null;
         }).catch(() => {
           isScanning = false;
           isScanFrozen = false;
+          videoTrack = null;
         });
       }
     }
@@ -2088,6 +2198,7 @@
 
       let totalSysUnits = 0;
       let totalActUnits = 0;
+      let totalDamagedUnits = 0;
 
       payload.items.forEach(item => {
         const packSize = Number(item.packSize) || 1;
@@ -2107,6 +2218,7 @@
 
         totalSysUnits += Math.round(rawStock);
         totalActUnits += Math.round(actDecimal);
+        totalDamagedUnits += Number(item.damagedQty) || 0;
       });
 
       const diffSign = totalDiffVal > 0.01 ? "+" : "";
@@ -2128,6 +2240,7 @@
 --------------------------
 📦 จำนวนรวมระบบ: ${totalSysUnits.toLocaleString()} หน่วย
 📦 จำนวนที่นับได้: ${totalActUnits.toLocaleString()} หน่วย
+⚠️ พบของชำรุด/เสีย: ${totalDamagedUnits.toLocaleString()} หน่วย
 ⚖️ ผลต่างจำนวน: ${unitSign}${diffUnits.toLocaleString()} หน่วย
 📌 ผลสรุป: ${statusIcon}`;
 
@@ -2343,6 +2456,7 @@
             sysStock: Number(item.sysStock) || 0,
             actBox: item.actBox !== undefined ? item.actBox : "",
             actPcs: item.actPcs !== undefined ? item.actPcs : "",
+            damagedQty: item.damagedQty || 0,
             diffDecimal: item.diffDecimal,
             actDecimal: item.actDecimal,
             remark: item.remark || "",

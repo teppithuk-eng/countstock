@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- HTML5 QR / Barcode Scanner (Fallback กรณีเปิดนอก LINE) -->
+  <!-- HTML5 QR / Barcode Scanner (Fallback) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Kanit:wght@300;400;500;600;700&display=swap');
@@ -175,30 +175,30 @@
         </div>
       </div>
 
-      <!-- 📢 แบนเนอร์แสดงสรุปยอดรวมระบบที่มีก่อนเริ่มตรวจนับ -->
-      <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-50 border border-amber-300/80 rounded-2xl p-3 shadow-sm">
-        <div class="flex items-center justify-between mb-1.5 border-b border-amber-200/60 pb-1">
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ แยกกล่อง/ชิ้น/มูลค่า -->
+      <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
+        <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
             <span class="text-base">📋</span>
-            <span class="text-xs font-black text-amber-950 uppercase tracking-tight">สรุปยอดรวมระบบที่มีก่อนตรวจนับ (Baseline Snapshot)</span>
+            <span class="text-xs font-bold text-amber-950 uppercase">สรุปยอดระบบที่มีก่อนตรวจนับ</span>
           </div>
           <span id="bannerLocText" class="text-[11px] font-black text-orange-700 bg-white px-2 py-0.5 rounded-lg border border-orange-200 shadow-xs"></span>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left pt-1">
-          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
-            <div class="text-[10px] text-slate-500 font-bold uppercase">จำนวนรายการสินค้า</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left">
+          <div class="bg-white border border-amber-200 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">จำนวนรายการ</div>
             <div id="bannerItemCount" class="text-sm sm:text-base font-black text-slate-800 mono-num">0 รายการ</div>
           </div>
-          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
-            <div class="text-[10px] text-slate-500 font-bold uppercase">ยอดรวม (กล่องเต็ม)</div>
+          <div class="bg-white border border-amber-200 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">กล่องเต็ม</div>
             <div id="bannerTotalBoxes" class="text-sm sm:text-base font-black text-slate-800 mono-num">0 กล่อง</div>
           </div>
-          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
-            <div class="text-[10px] text-slate-500 font-bold uppercase">ยอดรวม (เศษชิ้นสะสม)</div>
-            <div id="bannerTotalPcs" class="text-sm sm:text-base font-black text-amber-800 mono-num">0 ชิ้น</div>
+          <div class="bg-white border border-amber-200 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">เศษชิ้น / หน่วย EA</div>
+            <div id="bannerTotalPcs" class="text-sm sm:text-base font-black text-amber-700 mono-num">0 ชิ้น</div>
           </div>
-          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
-            <div class="text-[10px] text-slate-500 font-bold uppercase">มูลค่าสต๊อกระบบรวม</div>
+          <div class="bg-white border border-amber-200 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">มูลค่าระบบรวม</div>
             <div id="bannerTotalVal" class="text-sm sm:text-base font-black text-orange-600 mono-num">0.00 ฿</div>
           </div>
         </div>
@@ -231,22 +231,58 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (แสดงจำนวนรวมและมูลค่า) -->
+        <!-- การ์ดชุด 1: สรุปมูลค่าเงินบาท (Value Cards) -->
+        <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2 text-center">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 text-left shadow-xs">
+            <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">💰 สต๊อกระบบ</div>
+            <div id="sumSysVal" class="text-xs sm:text-base font-black text-slate-800 mono-num mt-0.5 truncate">0.00 ฿</div>
+          </div>
+          <div class="bg-orange-50/70 border border-orange-200 rounded-2xl p-2.5 text-left shadow-xs">
+            <div class="text-[9px] sm:text-[10px] font-bold text-orange-700 uppercase">💰 นับได้จริง</div>
+            <div id="sumActVal" class="text-xs sm:text-base font-black text-orange-600 mono-num mt-0.5 truncate">0.00 ฿</div>
+          </div>
+          <div id="diffCard" class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 text-left shadow-xs">
+            <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">💰 มูลค่าต่าง (Diff)</div>
+            <div id="sumDiffVal" class="text-xs sm:text-base font-black text-slate-700 mono-num mt-0.5 truncate">0.00 ฿</div>
+          </div>
+        </div>
+
+        <!-- การ์ดชุด 2: สรุปจำนวนสิ่งของ (Quantity Cards แยก กล่องเต็ม vs ชิ้น/EA) -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
-          <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
-            <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
-            <div id="sumSysVal" class="text-xs sm:text-base font-bold text-slate-800 mono-num mt-0.5 truncate">0.00 ฿</div>
-            <div id="sumSysQty" class="text-[10px] sm:text-xs text-slate-500 font-semibold mono-num truncate">รวม: 0 กล่อง</div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-2 text-left shadow-xs">
+            <div class="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase border-b border-slate-100 pb-1 mb-1">📦 จำนวนตามระบบ</div>
+            <div class="flex justify-between items-center text-[11px] mono-num font-semibold text-slate-700">
+              <span class="text-slate-400 font-normal">กล่อง:</span>
+              <span id="qtySysBox" class="font-bold">0</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] mono-num font-semibold text-amber-700">
+              <span class="text-slate-400 font-normal">ชิ้น/EA:</span>
+              <span id="qtySysPcs" class="font-bold">0</span>
+            </div>
           </div>
-          <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 text-left">
-            <div class="text-[9px] sm:text-[10px] font-bold text-orange-700 uppercase truncate">นับได้จริง</div>
-            <div id="sumActVal" class="text-xs sm:text-base font-bold text-orange-600 mono-num mt-0.5 truncate">0.00 ฿</div>
-            <div id="sumActQty" class="text-[10px] sm:text-xs text-orange-700 font-semibold mono-num truncate">รวม: 0 กล่อง</div>
+
+          <div class="bg-white border border-orange-200 rounded-2xl p-2 text-left shadow-xs">
+            <div class="text-[9px] sm:text-[10px] font-bold text-orange-800 uppercase border-b border-orange-100 pb-1 mb-1">📦 จำนวนที่นับได้</div>
+            <div class="flex justify-between items-center text-[11px] mono-num font-semibold text-orange-700">
+              <span class="text-slate-400 font-normal">กล่อง:</span>
+              <span id="qtyActBox" class="font-bold">0</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] mono-num font-semibold text-amber-700">
+              <span class="text-slate-400 font-normal">ชิ้น/EA:</span>
+              <span id="qtyActPcs" class="font-bold">0</span>
+            </div>
           </div>
-          <div id="diffCard" class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
-            <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">ผลต่าง (Diff)</div>
-            <div id="sumDiffVal" class="text-xs sm:text-base font-bold text-slate-700 mono-num mt-0.5 truncate">0.00 ฿</div>
-            <div id="sumDiffQty" class="text-[10px] sm:text-xs text-slate-600 font-semibold mono-num truncate">ต่าง: 0</div>
+
+          <div class="bg-white border border-slate-200 rounded-2xl p-2 text-left shadow-xs">
+            <div class="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase border-b border-slate-100 pb-1 mb-1">⚖️ ผลต่างจำนวน</div>
+            <div class="flex justify-between items-center text-[11px] mono-num font-semibold">
+              <span class="text-slate-400 font-normal">กล่อง:</span>
+              <span id="qtyDiffBox" class="font-bold text-slate-700">0</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] mono-num font-semibold">
+              <span class="text-slate-400 font-normal">ชิ้น/EA:</span>
+              <span id="qtyDiffPcs" class="font-bold text-slate-700">0</span>
+            </div>
           </div>
         </div>
 
@@ -334,7 +370,7 @@
                 <div id="focusSysBox" class="text-base font-black text-slate-800 mono-num">0</div>
               </div>
               <div id="focusSysPcsBox">
-                <div class="text-[10px] text-slate-400 font-bold uppercase">ยอดระบบ (เศษ)</div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase">ยอดระบบ (เศษ/EA)</div>
                 <div id="focusSysPcs" class="text-base font-black text-amber-700 mono-num">0</div>
               </div>
             </div>
@@ -881,7 +917,7 @@
       }
       const val = Number(decimalVal);
       if (packSize <= 1) {
-        return { box: Math.round(val), pcs: 0, totalPcs: Math.round(val) };
+        return { box: 0, pcs: Math.round(val), totalPcs: Math.round(val) };
       }
       const box = Math.floor(val);
       const fraction = val - box;
@@ -902,9 +938,7 @@
         itemMasterCache = res.allMaster || {};
         currentFocusIndex = 0;
 
-        // คำนวณและแสดงแบนเนอร์ยอดรวมก่อนตรวจนับ
         renderPreAuditSummary(loc);
-
         populateGroupFilter();
         renderTable();
         if (currentCountMode === 'focus') renderFocusCard();
@@ -914,7 +948,6 @@
       }
     }
 
-    // แสดงสรุปยอดรวมระบบที่มีอยู่จริงก่อนตรวจนับ
     function renderPreAuditSummary(locationName) {
       let bTotalBoxes = 0;
       let bTotalPcs = 0;
@@ -933,7 +966,7 @@
       document.getElementById("bannerLocText").innerText = locationName;
       document.getElementById("bannerItemCount").innerText = `${currentItems.length} รายการ`;
       document.getElementById("bannerTotalBoxes").innerText = `${bTotalBoxes.toLocaleString()} กล่อง`;
-      document.getElementById("bannerTotalPcs").innerText = `${bTotalPcs.toLocaleString()} ชิ้น`;
+      document.getElementById("bannerTotalPcs").innerText = `${bTotalPcs.toLocaleString()} ชิ้น/EA`;
       document.getElementById("bannerTotalVal").innerText = `${bTotalVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿`;
       document.getElementById("preAuditSummaryBanner").classList.remove("hidden");
     }
@@ -997,8 +1030,13 @@
       const packSize = Number(item.packSize) || 1;
       const sysParsed = parseStockValue(item.sysStock, packSize);
 
-      item.actBox = sysParsed.box;
-      item.actPcs = packSize > 1 ? sysParsed.pcs : "";
+      if (packSize <= 1) {
+        item.actBox = sysParsed.pcs;
+        item.actPcs = "";
+      } else {
+        item.actBox = sysParsed.box;
+        item.actPcs = sysParsed.pcs;
+      }
       updateRowDisplay(index);
       recalcSummary();
     }
@@ -1021,8 +1059,13 @@
         if (matchGroup && matchSearch && matchStatus && (item.actBox === undefined || item.actBox === "")) {
           const packSize = Number(item.packSize) || 1;
           const sysParsed = parseStockValue(item.sysStock, packSize);
-          item.actBox = sysParsed.box;
-          item.actPcs = packSize > 1 ? sysParsed.pcs : "";
+          if (packSize <= 1) {
+            item.actBox = sysParsed.pcs;
+            item.actPcs = "";
+          } else {
+            item.actBox = sysParsed.box;
+            item.actPcs = sysParsed.pcs;
+          }
           updateRowDisplay(index);
           count++;
         }
@@ -1080,14 +1123,15 @@
       document.getElementById("focusItemName").innerText = `${item.itemName} (${item.uom})`;
       document.getElementById("focusItemPrice").innerText = `ราคา: ${(Number(item.price)||0).toLocaleString(undefined, {minimumFractionDigits:2})} ฿`;
 
-      document.getElementById("focusSysBox").innerText = `${sysParsed.box} ${isEA ? 'EA' : 'กล่อง'}`;
       if (!isEA) {
+        document.getElementById("focusSysBox").innerText = `${sysParsed.box} กล่อง`;
         document.getElementById("focusSysPcsBox").classList.remove("hidden");
         document.getElementById("focusSysPcs").innerText = `${sysParsed.pcs} ชิ้น`;
         document.getElementById("focusPcsContainer").classList.remove("hidden");
         document.getElementById("focusLabelBox").innerText = "กล่อง";
         document.getElementById("focusLabelPcs").innerText = `เศษ (/${packSize})`;
       } else {
+        document.getElementById("focusSysBox").innerText = `${sysParsed.pcs} EA`;
         document.getElementById("focusSysPcsBox").classList.add("hidden");
         document.getElementById("focusPcsContainer").classList.add("hidden");
         document.getElementById("focusLabelBox").innerText = "จำนวน (EA)";
@@ -1120,7 +1164,7 @@
 
       const actBox = hasBox ? Number(item.actBox) : 0;
       const actPcs = hasPcs ? Number(item.actPcs) : 0;
-      const actTotalPcs = (actBox * packSize) + actPcs;
+      const actTotalPcs = isEA ? actBox : (actBox * packSize) + actPcs;
       const diffPcs = actTotalPcs - sysParsed.totalPcs;
 
       const diffBoxPart = Math.trunc(diffPcs / packSize);
@@ -1267,7 +1311,7 @@
             
             <td class="p-1.5 text-center text-slate-700 mono-num whitespace-nowrap">
               ${isEA ? `
-                <span class="font-bold text-xs sm:text-sm text-slate-900">${sysParsed.box}</span> <span class="text-[10px] font-semibold text-slate-600">EA</span>
+                <span class="font-bold text-xs sm:text-sm text-slate-900">${sysParsed.pcs}</span> <span class="text-[10px] font-semibold text-slate-600">EA</span>
               ` : `
                 <span class="font-bold text-xs sm:text-sm">${sysParsed.box}</span> <span class="text-[10px] text-slate-500">กล่อง</span>
                 ${sysParsed.pcs > 0 ? `<span class="ml-0.5 text-[10px] text-amber-700 font-semibold">(+${sysParsed.pcs}ชิ้น)</span>` : ''}
@@ -1397,7 +1441,7 @@
 
       const actBox = hasBox ? Number(item.actBox) : 0;
       const actPcs = hasPcs ? Number(item.actPcs) : 0;
-      const actTotalPcs = (actBox * packSize) + actPcs;
+      const actTotalPcs = isEA ? actBox : (actBox * packSize) + actPcs;
       const actDecimal = actTotalPcs / packSize;
       item.actDecimal = actDecimal;
 
@@ -1429,16 +1473,16 @@
       }
     }
 
+    // คำนวณยอดเงินและแยกจำนวนสิ่งของ (กล่องเต็ม vs ชิ้น/EA)
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
       let totalDiffVal = 0;
 
       let totalSysBoxes = 0;
-      let totalSysLoosePcs = 0;
+      let totalSysPieces = 0;
       let totalActBoxes = 0;
-      let totalActLoosePcs = 0;
-      let totalDiffLoosePcs = 0;
+      let totalActPieces = 0;
 
       const groupDiffMap = new Map();
 
@@ -1451,7 +1495,7 @@
         
         totalSysVal += (Number(item.sysStock) || 0) * price;
         totalSysBoxes += sysParsed.box;
-        totalSysLoosePcs += sysParsed.pcs;
+        totalSysPieces += sysParsed.pcs;
 
         const hasBox = item.actBox !== undefined && item.actBox !== "";
         const hasPcs = item.actPcs !== undefined && item.actPcs !== "";
@@ -1459,7 +1503,15 @@
         if (hasBox || hasPcs) {
           const actBox = hasBox ? Number(item.actBox) : 0;
           const actPcs = hasPcs ? Number(item.actPcs) : 0;
-          const actTotalPcs = (actBox * packSize) + actPcs;
+          
+          if (isEA) {
+            totalActPieces += actBox;
+          } else {
+            totalActBoxes += actBox;
+            totalActPieces += actPcs;
+          }
+
+          const actTotalPcs = isEA ? actBox : (actBox * packSize) + actPcs;
           const actDecimal = actTotalPcs / packSize;
           const diffPcs = actTotalPcs - sysParsed.totalPcs;
           const diffDecimal = diffPcs / packSize;
@@ -1467,10 +1519,6 @@
 
           totalActVal += actDecimal * price;
           totalDiffVal += diffVal;
-
-          totalActBoxes += actBox;
-          totalActLoosePcs += actPcs;
-          totalDiffLoosePcs += diffPcs;
 
           const grpData = groupDiffMap.get(grp) || { diffVal: 0, diffPcs: 0, isEA: isEA, packSize: packSize };
           grpData.diffVal += diffVal;
@@ -1483,37 +1531,39 @@
       document.getElementById("sumSysVal").innerText = totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
       document.getElementById("sumActVal").innerText = totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
 
-      // แสดงจำนวนรวม
-      const sysQtyEl = document.getElementById("sumSysQty");
-      if (sysQtyEl) {
-        sysQtyEl.innerText = `รวม: ${totalSysBoxes.toLocaleString()} กล่อง` + (totalSysLoosePcs > 0 ? ` (+${totalSysLoosePcs} ชิ้น)` : '');
-      }
-
-      const actQtyEl = document.getElementById("sumActQty");
-      if (actQtyEl) {
-        actQtyEl.innerText = `นับ: ${totalActBoxes.toLocaleString()} กล่อง` + (totalActLoosePcs > 0 ? ` (+${totalActLoosePcs} ชิ้น)` : '');
-      }
-
-      const diffQtyEl = document.getElementById("sumDiffQty");
-      if (diffQtyEl) {
-        const sign = totalDiffLoosePcs > 0 ? "+" : "";
-        diffQtyEl.innerText = `ผลต่าง: ${sign}${totalDiffLoosePcs.toLocaleString()} ชิ้นสุทธิ`;
-      }
-
       const diffCard = document.getElementById("diffCard");
       const sumDiffSpan = document.getElementById("sumDiffVal");
       sumDiffSpan.innerText = (totalDiffVal > 0 ? "+" : "") + totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
 
       if (Math.abs(totalDiffVal) < 0.01) {
-        diffCard.className = "bg-emerald-50/60 border border-emerald-200 rounded-xl p-2 text-left";
-        sumDiffSpan.className = "text-xs sm:text-base font-bold text-emerald-700 mono-num mt-0.5 truncate";
+        diffCard.className = "bg-emerald-50/60 border border-emerald-200 rounded-2xl p-2.5 text-left shadow-xs";
+        sumDiffSpan.className = "text-xs sm:text-base font-black text-emerald-700 mono-num mt-0.5 truncate";
       } else if (totalDiffVal > 0) {
-        diffCard.className = "bg-amber-50/60 border border-amber-200 rounded-xl p-2 text-left";
-        sumDiffSpan.className = "text-xs sm:text-base font-bold text-amber-700 mono-num mt-0.5 truncate";
+        diffCard.className = "bg-amber-50/60 border border-amber-200 rounded-2xl p-2.5 text-left shadow-xs";
+        sumDiffSpan.className = "text-xs sm:text-base font-black text-amber-700 mono-num mt-0.5 truncate";
       } else {
-        diffCard.className = "bg-rose-50/60 border border-rose-200 rounded-xl p-2 text-left";
-        sumDiffSpan.className = "text-xs sm:text-base font-bold text-rose-700 mono-num mt-0.5 truncate";
+        diffCard.className = "bg-rose-50/60 border border-rose-200 rounded-2xl p-2.5 text-left shadow-xs";
+        sumDiffSpan.className = "text-xs sm:text-base font-black text-rose-700 mono-num mt-0.5 truncate";
       }
+
+      // แสดงจำนวนสิ่งของแยกชัดเจน
+      document.getElementById("qtySysBox").innerText = `${totalSysBoxes.toLocaleString()} กล่อง`;
+      document.getElementById("qtySysPcs").innerText = `${totalSysPieces.toLocaleString()} ชิ้น/EA`;
+
+      document.getElementById("qtyActBox").innerText = `${totalActBoxes.toLocaleString()} กล่อง`;
+      document.getElementById("qtyActPcs").innerText = `${totalActPieces.toLocaleString()} ชิ้น/EA`;
+
+      const diffBoxes = totalActBoxes - totalSysBoxes;
+      const diffPieces = totalActPieces - totalSysPieces;
+
+      const diffBoxEl = document.getElementById("qtyDiffBox");
+      const diffPcsEl = document.getElementById("qtyDiffPcs");
+
+      diffBoxEl.innerText = (diffBoxes > 0 ? "+" : "") + diffBoxes.toLocaleString();
+      diffBoxEl.className = diffBoxes < 0 ? "font-bold text-rose-600" : (diffBoxes > 0 ? "font-bold text-emerald-700" : "font-bold text-slate-700");
+
+      diffPcsEl.innerText = (diffPieces > 0 ? "+" : "") + diffPieces.toLocaleString();
+      diffPcsEl.className = diffPieces < 0 ? "font-bold text-rose-600" : (diffPieces > 0 ? "font-bold text-emerald-700" : "font-bold text-slate-700");
 
       const catListDiv = document.getElementById("categorySummaryList");
       if (catListDiv) {
@@ -1726,7 +1776,6 @@
       }
     }
 
-    // ฟังก์ชันส่งผลการตรวจนับกลับเข้าห้องแชต LINE
     async function sendAuditReportToLine(payload, timestamp) {
       if (typeof liff === "undefined" || !liff.isInClient || !liff.isInClient()) {
         return;
@@ -1735,41 +1784,56 @@
       let totalSysVal = 0;
       let totalActVal = 0;
       let totalDiffVal = 0;
-      let totalDiffPcs = 0;
+
+      let bSys = 0;
+      let pSys = 0;
+      let bAct = 0;
+      let pAct = 0;
 
       payload.items.forEach(item => {
         const packSize = Number(item.packSize) || 1;
         const price = Number(item.price) || 0;
+        const isEA = packSize <= 1;
         const sysParsed = parseStockValue(item.sysStock, packSize);
+
         const actBox = Number(item.actBox) || 0;
         const actPcs = Number(item.actPcs) || 0;
-        const actTotalPcs = (actBox * packSize) + actPcs;
+        const actTotalPcs = isEA ? actBox : (actBox * packSize) + actPcs;
         const diffPcs = actTotalPcs - sysParsed.totalPcs;
         const diffVal = (diffPcs / packSize) * price;
 
         totalSysVal += (Number(item.sysStock) || 0) * price;
         totalActVal += (actTotalPcs / packSize) * price;
         totalDiffVal += diffVal;
-        totalDiffPcs += diffPcs;
+
+        bSys += sysParsed.box;
+        pSys += sysParsed.pcs;
+        if (isEA) {
+          pAct += actBox;
+        } else {
+          bAct += actBox;
+          pAct += actPcs;
+        }
       });
 
       const diffSign = totalDiffVal > 0.01 ? "+" : "";
       const statusIcon = Math.abs(totalDiffVal) < 0.01 ? "🟢 ยอดตรงครบถ้วน" : (totalDiffVal < 0 ? "🔴 สต๊อกขาด (ต้องเปิดบิล)" : "🟡 สินค้าเกิน");
 
       const messageText = 
-`📦 บันทึกตรวจนับสต๊อกเรียบร้อยแล้ว
+`📦 สรุปผลการตรวจนับสต๊อก
 --------------------------
 🏢 ทะเบียน/คลัง: ${payload.location}
-👤 ผู้นับสต๊อก: ${payload.auditor}
-⏰ วัน-เวลา: ${timestamp}
-📊 รายการสินค้า: ${payload.items.length} รายการ
+👤 ผู้นับ: ${payload.auditor}
+⏰ บันทึกเมื่อ: ${timestamp}
+📋 ตรวจนับ: ${payload.items.length} รายการ
 
 💰 สต๊อกระบบ: ${totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
 💰 นับได้จริง: ${totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
-⚖️ ผลต่างสุทธิ: ${diffSign}${totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
-📌 สถานะ: ${statusIcon}
+⚖️ มูลค่าต่าง: ${diffSign}${totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
 --------------------------
-✅ ข้อมูลถูกบันทึกลงระบบเรียบร้อย`;
+📦 จำนวนระบบ: ${bSys} กล่อง | ${pSys} ชิ้น/EA
+📦 นับได้จริง: ${bAct} กล่อง | ${pAct} ชิ้น/EA
+📌 สรุป: ${statusIcon}`;
 
       try {
         await liff.sendMessages([{
@@ -1777,7 +1841,7 @@
           text: messageText
         }]);
       } catch (err) {
-        console.warn("ไม่สามารถส่งข้อความเข้าห้องแชต LINE อัตโนมัติได้:", err);
+        console.warn("LIFF sendMessages Warning:", err);
       }
     }
 
@@ -1822,9 +1886,7 @@
         saveBtn.innerText = "💾 บันทึกผลการตรวจนับทั้งหมด";
 
         if (res && res.success) {
-          // ส่งการ์ดสรุปเข้าห้องแชต LINE
           await sendAuditReportToLine(payload, res.timestamp);
-
           alert(isEditMode ? "อัปเดตการแก้ไขสต๊อกสำเร็จเรียบร้อยแล้ว!" : (onlyCurrentGroup ? `บันทึกกลุ่ม "${selectedGroup}" สำเร็จแล้ว!` : "บันทึกข้อมูลทุกรายการสำเร็จเรียบร้อยแล้ว!"));
           isEditMode = false;
           originalAuditDate = "";
@@ -1978,7 +2040,6 @@
           }));
 
           renderPreAuditSummary(loc);
-
           document.getElementById("tableContainer").classList.remove("hidden");
           populateGroupFilter();
           renderTable();
@@ -2078,7 +2139,7 @@
           `;
         }
 
-        const sysBoxDisplay = showSystemStock ? sysParsed.box : "-";
+        const sysBoxDisplay = showSystemStock ? (!isEA ? sysParsed.box : sysParsed.pcs) : "-";
         const sysPcsDisplay = showSystemStock ? (!isEA ? sysParsed.pcs : "-") : "-";
 
         tbody.innerHTML += `
@@ -2185,7 +2246,7 @@
 
         const actBox = item.actBox !== undefined && item.actBox !== "" ? Number(item.actBox) : 0;
         const actPcs = item.actPcs !== undefined && item.actPcs !== "" ? Number(item.actPcs) : 0;
-        const actTotalPcs = (actBox * packSize) + actPcs;
+        const actTotalPcs = isEA ? actBox : (actBox * packSize) + actPcs;
         const actDecimal = actTotalPcs / packSize;
 
         const diffPcs = actTotalPcs - sysParsed.totalPcs;
@@ -2203,10 +2264,15 @@
 
         grandTotalSysBox += sysParsed.box;
         grandTotalSysPcs += sysParsed.pcs;
-        grandTotalActBox += actBox;
-        grandTotalActPcs += actPcs;
-        grandTotalDiffBox += diffBoxPart;
-        grandTotalDiffPcs += (!isEA ? diffPcsPart : 0);
+        if (isEA) {
+          grandTotalActPcs += actBox;
+          grandTotalDiffPcs += diffPcs;
+        } else {
+          grandTotalActBox += actBox;
+          grandTotalActPcs += actPcs;
+          grandTotalDiffBox += diffBoxPart;
+          grandTotalDiffPcs += diffPcsPart;
+        }
 
         const grpSummary = groupSummaryMap.get(grp) || { diffVal: 0, diffPcs: 0, packSize: packSize, isEA: isEA };
         grpSummary.diffVal += diffVal;
@@ -2245,10 +2311,15 @@
 
         grpSysBoxSum += sysParsed.box;
         grpSysPcsSum += sysParsed.pcs;
-        grpActBoxSum += actBox;
-        grpActPcsSum += actPcs;
-        grpDiffBoxSum += diffBoxPart;
-        grpDiffPcsSum += (!isEA ? diffPcsPart : 0);
+        if (isEA) {
+          grpActPcsSum += actBox;
+          grpDiffPcsSum += diffPcs;
+        } else {
+          grpActBoxSum += actBox;
+          grpActPcsSum += actPcs;
+          grpDiffBoxSum += diffBoxPart;
+          grpDiffPcsSum += diffPcsPart;
+        }
 
         tbody.innerHTML += `
           <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
@@ -2259,13 +2330,13 @@
             <td class="p-1 border-r border-slate-200 text-center">${item.uom || 'EA'}</td>
             <td class="p-1 border-r border-slate-200 text-right mono-num">${price.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
             
-            <td class="p-1 border-r border-slate-200 text-center mono-num font-semibold">${sysParsed.box}</td>
+            <td class="p-1 border-r border-slate-200 text-center mono-num font-semibold">${!isEA ? sysParsed.box : sysParsed.pcs}</td>
             <td class="p-1 border-r border-slate-200 text-center mono-num text-slate-500">${!isEA ? sysParsed.pcs : '-'}</td>
 
             <td class="p-1 border-r border-slate-200 text-center mono-num font-semibold text-orange-700">${actBox}</td>
             <td class="p-1 border-r border-slate-200 text-center mono-num text-amber-700 font-medium">${!isEA ? actPcs : '-'}</td>
 
-            <td class="p-1 border-r border-slate-200 text-center mono-num font-bold ${diffPcs < 0 ? 'text-rose-600' : (diffPcs > 0 ? 'text-amber-600' : '')}">${diffBoxPart}</td>
+            <td class="p-1 border-r border-slate-200 text-center mono-num font-bold ${diffPcs < 0 ? 'text-rose-600' : (diffPcs > 0 ? 'text-amber-600' : '')}">${!isEA ? diffBoxPart : (diffPcs > 0 ? '+' + diffPcs : diffPcs)}</td>
             <td class="p-1 border-r border-slate-200 text-center mono-num font-bold ${diffPcs < 0 ? 'text-rose-600' : (diffPcs > 0 ? 'text-amber-600' : '')}">${!isEA ? diffPcsPart : '-'}</td>
 
             <td class="p-1 border-r border-slate-200 text-right mono-num">${sysVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
@@ -2284,9 +2355,9 @@
         <tr class="bg-orange-100/70 border-t-2 border-slate-800 text-slate-900 font-black">
           <td colspan="4" class="p-1.5 text-right font-bold uppercase">รวมทั้งสิ้น (Grand Total):</td>
           <td class="p-1 text-center mono-num text-xs font-bold">${grandTotalSysBox.toLocaleString()}</td>
-          <td class="p-1 text-center mono-num text-xs font-bold">${grandTotalSysPcs > 0 ? grandTotalSysPcs : '-'}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold">${grandTotalSysPcs.toLocaleString()}</td>
           <td class="p-1 text-center mono-num text-xs font-bold text-orange-700">${grandTotalActBox.toLocaleString()}</td>
-          <td class="p-1 text-center mono-num text-xs font-bold text-amber-700">${grandTotalActPcs > 0 ? grandTotalActPcs : '-'}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold text-amber-700">${grandTotalActPcs.toLocaleString()}</td>
           <td class="p-1 text-center mono-num text-xs font-bold ${grandTotalDiffBox < 0 ? 'text-rose-600' : (grandTotalDiffBox > 0 ? 'text-emerald-700' : '')}">${grandTotalDiffBox > 0 ? '+' + grandTotalDiffBox : grandTotalDiffBox}</td>
           <td class="p-1 text-center mono-num text-xs font-bold ${grandTotalDiffPcs < 0 ? 'text-rose-600' : (grandTotalDiffPcs > 0 ? 'text-emerald-700' : '')}">${grandTotalDiffPcs !== 0 ? grandTotalDiffPcs : '-'}</td>
           <td class="p-1.5 text-right mono-num font-black">${totalSysVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>

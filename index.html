@@ -202,19 +202,22 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง -->
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (เพิ่มแสดงจำนวนรวมกล่อง/ชิ้น) -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
             <div id="sumSysVal" class="text-xs sm:text-base font-bold text-slate-800 mono-num mt-0.5 truncate">0.00 ฿</div>
+            <div id="sumSysQty" class="text-[10px] sm:text-xs text-slate-500 font-semibold mono-num truncate">รวม: 0 กล่อง</div>
           </div>
           <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-orange-700 uppercase truncate">นับได้จริง</div>
             <div id="sumActVal" class="text-xs sm:text-base font-bold text-orange-600 mono-num mt-0.5 truncate">0.00 ฿</div>
+            <div id="sumActQty" class="text-[10px] sm:text-xs text-orange-700 font-semibold mono-num truncate">รวม: 0 กล่อง</div>
           </div>
           <div id="diffCard" class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">ผลต่าง (Diff)</div>
             <div id="sumDiffVal" class="text-xs sm:text-base font-bold text-slate-700 mono-num mt-0.5 truncate">0.00 ฿</div>
+            <div id="sumDiffQty" class="text-[10px] sm:text-xs text-slate-600 font-semibold mono-num truncate">ต่าง: 0</div>
           </div>
         </div>
 
@@ -649,9 +652,7 @@
     // ==========================================
     // ⚙️ CONFIGURATION: ตั้งค่าการเชื่อมต่อ
     // ==========================================
-    // 1. ใส่ Web App URL ของ Apps Script ที่ลงท้ายด้วย /exec
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwWDxQq1epWvw0k-xR8TUUJZabuigttLwfXoNZk0Sa2TWIAIh8KuD7T5C5OquBfnvtf/exec";
-    // 2. ใส่ LIFF ID ที่ได้จาก LINE Developers Console
     const MY_LIFF_ID = "2011735024-jArFB2Qa";
 
     let currentItems = [];
@@ -984,8 +985,11 @@
 
         const isCounted = (item.actBox !== undefined && item.actBox !== "") || (item.actPcs !== undefined && item.actPcs !== "");
         let matchStatus = true;
-        if (selectedStatus === "UNCOUNTED") matchStatus = !isCounted;
-        else if (selectedStatus === "COUNTED") matchStatus = isCounted;
+        if (selectedStatus === "UNCOUNTED") {
+          matchStatus = !isCounted;
+        } else if (selectedStatus === "COUNTED") {
+          matchStatus = isCounted;
+        }
 
         if (matchGroup && matchSearch && matchStatus) {
           list.push({ item: item, originalIndex: originalIndex });
@@ -1367,10 +1371,17 @@
       }
     }
 
+    // ฟังก์ชันคำนวณยอดเงินและจำนวนชิ้น/กล่องรวม
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
       let totalDiffVal = 0;
+
+      let totalSysBoxes = 0;
+      let totalSysLoosePcs = 0;
+      let totalActBoxes = 0;
+      let totalActLoosePcs = 0;
+      let totalDiffLoosePcs = 0;
 
       const groupDiffMap = new Map();
 
@@ -1382,6 +1393,8 @@
         const sysParsed = parseStockValue(item.sysStock, packSize);
         
         totalSysVal += (Number(item.sysStock) || 0) * price;
+        totalSysBoxes += sysParsed.box;
+        totalSysLoosePcs += sysParsed.pcs;
 
         const hasBox = item.actBox !== undefined && item.actBox !== "";
         const hasPcs = item.actPcs !== undefined && item.actPcs !== "";
@@ -1398,6 +1411,10 @@
           totalActVal += actDecimal * price;
           totalDiffVal += diffVal;
 
+          totalActBoxes += actBox;
+          totalActLoosePcs += actPcs;
+          totalDiffLoosePcs += diffPcs;
+
           const grpData = groupDiffMap.get(grp) || { diffVal: 0, diffPcs: 0, isEA: isEA, packSize: packSize };
           grpData.diffVal += diffVal;
           grpData.diffPcs += diffPcs;
@@ -1405,8 +1422,26 @@
         }
       });
 
+      // ยอดเงิน
       document.getElementById("sumSysVal").innerText = totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
       document.getElementById("sumActVal").innerText = totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+
+      // แสดงจำนวนรวม
+      const sysQtyEl = document.getElementById("sumSysQty");
+      if (sysQtyEl) {
+        sysQtyEl.innerText = `รวม: ${totalSysBoxes.toLocaleString()} กล่อง` + (totalSysLoosePcs > 0 ? ` (+${totalSysLoosePcs} ชิ้น)` : '');
+      }
+
+      const actQtyEl = document.getElementById("sumActQty");
+      if (actQtyEl) {
+        actQtyEl.innerText = `นับ: ${totalActBoxes.toLocaleString()} กล่อง` + (totalActLoosePcs > 0 ? ` (+${totalActLoosePcs} ชิ้น)` : '');
+      }
+
+      const diffQtyEl = document.getElementById("sumDiffQty");
+      if (diffQtyEl) {
+        const sign = totalDiffLoosePcs > 0 ? "+" : "";
+        diffQtyEl.innerText = `ผลต่าง: ${sign}${totalDiffLoosePcs.toLocaleString()} ชิ้นสุทธิ`;
+      }
 
       const diffCard = document.getElementById("diffCard");
       const sumDiffSpan = document.getElementById("sumDiffVal");
@@ -1969,36 +2004,34 @@
       let totalSysVal = 0;
       let totalActVal = 0;
       let totalDiffVal = 0;
+
+      let grandTotalSysBox = 0;
+      let grandTotalSysPcs = 0;
+      let grandTotalActBox = 0;
+      let grandTotalActPcs = 0;
+      let grandTotalDiffBox = 0;
+      let grandTotalDiffPcs = 0;
       
       let currentGroup = null;
       let grpSysVal = 0;
       let grpActVal = 0;
       let grpDiffVal = 0;
 
-      let grpSysPcs = 0;
-      let grpActPcs = 0;
-      let grpDiffPcs = 0;
-      let grpPackSize = 1;
-      let grpIsEA = true;
+      let grpSysBoxSum = 0;
+      let grpSysPcsSum = 0;
+      let grpActBoxSum = 0;
+      let grpActPcsSum = 0;
+      let grpDiffBoxSum = 0;
+      let grpDiffPcsSum = 0;
 
       const groupSummaryMap = new Map();
 
-      function appendGroupSubtotalRow(grpName, sVal, aVal, dVal, sPcs, aPcs, dPcs, pSize, isEA) {
+      function appendGroupSubtotalRow(grpName, sVal, aVal, dVal, sBox, sPcs, aBox, aPcs, dBox, dPcs) {
         if (!grpName) return;
         
         const isZero = Math.abs(dVal) < 0.01;
         const color = isZero ? 'text-slate-800' : (dVal < 0 ? 'text-rose-600' : 'text-emerald-700');
         const sign = dVal > 0.01 ? "+" : "";
-
-        const sysBox = isEA ? sPcs : Math.trunc(sPcs / pSize);
-        const sysPcs = isEA ? '-' : Math.abs(sPcs % pSize);
-
-        const actBox = isEA ? aPcs : Math.trunc(aPcs / pSize);
-        const actPcs = isEA ? '-' : Math.abs(aPcs % pSize);
-
-        const diffBox = isEA ? (dPcs > 0 ? "+" : "") + dPcs : Math.trunc(dPcs / pSize);
-        const diffPcs = isEA ? '-' : Math.abs(dPcs % pSize);
-
         const statusText = isZero ? 'พอดี' : (dVal < 0 ? 'ต้องเปิดบิลเก็บ' : 'สินค้าเกิน');
 
         tbody.innerHTML += `
@@ -2006,14 +2039,14 @@
             <td colspan="4" class="p-1 text-right uppercase tracking-wide">
               💰 รวมกลุ่ม [${grpName}]:
             </td>
-            <td class="p-0.5 text-center mono-num">${sysBox}</td>
-            <td class="p-0.5 text-center mono-num text-slate-500">${sysPcs}</td>
+            <td class="p-0.5 text-center mono-num">${sBox}</td>
+            <td class="p-0.5 text-center mono-num text-slate-500">${sPcs > 0 ? sPcs : '-'}</td>
 
-            <td class="p-0.5 text-center mono-num text-orange-700">${actBox}</td>
-            <td class="p-0.5 text-center mono-num text-amber-700">${actPcs}</td>
+            <td class="p-0.5 text-center mono-num text-orange-700">${aBox}</td>
+            <td class="p-0.5 text-center mono-num text-amber-700">${aPcs > 0 ? aPcs : '-'}</td>
 
-            <td class="p-0.5 text-center mono-num ${color}">${diffBox}</td>
-            <td class="p-0.5 text-center mono-num ${color}">${diffPcs}</td>
+            <td class="p-0.5 text-center mono-num ${color}">${dBox > 0 ? '+' + dBox : dBox}</td>
+            <td class="p-0.5 text-center mono-num ${color}">${dPcs > 0 ? '+' + dPcs : (dPcs < 0 ? dPcs : '-')}</td>
 
             <td class="p-1 border-r border-slate-300 text-right mono-num font-black">${sVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
             <td class="p-1 border-r border-slate-300 text-right mono-num font-black">${aVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
@@ -2050,6 +2083,13 @@
         totalActVal += actVal;
         totalDiffVal += diffVal;
 
+        grandTotalSysBox += sysParsed.box;
+        grandTotalSysPcs += sysParsed.pcs;
+        grandTotalActBox += actBox;
+        grandTotalActPcs += actPcs;
+        grandTotalDiffBox += diffBoxPart;
+        grandTotalDiffPcs += (!isEA ? diffPcsPart : 0);
+
         const grpSummary = groupSummaryMap.get(grp) || { diffVal: 0, diffPcs: 0, packSize: packSize, isEA: isEA };
         grpSummary.diffVal += diffVal;
         grpSummary.diffPcs += diffPcs;
@@ -2059,17 +2099,18 @@
 
         if (grp !== currentGroup) {
           if (currentGroup !== null) {
-            appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysPcs, grpActPcs, grpDiffPcs, grpPackSize, grpIsEA);
+            appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysBoxSum, grpSysPcsSum, grpActBoxSum, grpActPcsSum, grpDiffBoxSum, grpDiffPcsSum);
           }
           currentGroup = grp;
           grpSysVal = 0;
           grpActVal = 0;
           grpDiffVal = 0;
-          grpSysPcs = 0;
-          grpActPcs = 0;
-          grpDiffPcs = 0;
-          grpPackSize = packSize;
-          grpIsEA = isEA;
+          grpSysBoxSum = 0;
+          grpSysPcsSum = 0;
+          grpActBoxSum = 0;
+          grpActPcsSum = 0;
+          grpDiffBoxSum = 0;
+          grpDiffPcsSum = 0;
 
           tbody.innerHTML += `
             <tr class="group-row-print border-y border-orange-200">
@@ -2083,9 +2124,13 @@
         grpSysVal += sysVal;
         grpActVal += actVal;
         grpDiffVal += diffVal;
-        grpSysPcs += sysParsed.totalPcs;
-        grpActPcs += actTotalPcs;
-        grpDiffPcs += diffPcs;
+
+        grpSysBoxSum += sysParsed.box;
+        grpSysPcsSum += sysParsed.pcs;
+        grpActBoxSum += actBox;
+        grpActPcsSum += actPcs;
+        grpDiffBoxSum += diffBoxPart;
+        grpDiffPcsSum += (!isEA ? diffPcsPart : 0);
 
         tbody.innerHTML += `
           <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
@@ -2114,14 +2159,21 @@
       });
 
       if (currentGroup !== null) {
-        appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysPcs, grpActPcs, grpDiffPcs, grpPackSize, grpIsEA);
+        appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysBoxSum, grpSysPcsSum, grpActBoxSum, grpActPcsSum, grpDiffBoxSum, grpDiffPcsSum);
       }
 
+      // แสดงแถวรวมทั้งสิ้น (Grand Total) พร้อมยอดรวมกล่อง/ชิ้น
       tfoot.innerHTML = `
-        <tr>
-          <td colspan="10" class="p-1.5 text-right font-bold text-slate-900 uppercase">รวมทั้งสิ้นทุกรายการ (Grand Total):</td>
-          <td class="p-1.5 text-right mono-num font-black text-slate-900">${totalSysVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
-          <td class="p-1.5 text-right mono-num font-black text-slate-900">${totalActVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
+        <tr class="bg-orange-100/70 border-t-2 border-slate-800 text-slate-900 font-black">
+          <td colspan="4" class="p-1.5 text-right font-bold uppercase">รวมทั้งสิ้น (Grand Total):</td>
+          <td class="p-1 text-center mono-num text-xs font-bold">${grandTotalSysBox.toLocaleString()}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold">${grandTotalSysPcs > 0 ? grandTotalSysPcs : '-'}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold text-orange-700">${grandTotalActBox.toLocaleString()}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold text-amber-700">${grandTotalActPcs > 0 ? grandTotalActPcs : '-'}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold ${grandTotalDiffBox < 0 ? 'text-rose-600' : (grandTotalDiffBox > 0 ? 'text-emerald-700' : '')}">${grandTotalDiffBox > 0 ? '+' + grandTotalDiffBox : grandTotalDiffBox}</td>
+          <td class="p-1 text-center mono-num text-xs font-bold ${grandTotalDiffPcs < 0 ? 'text-rose-600' : (grandTotalDiffPcs > 0 ? 'text-emerald-700' : '')}">${grandTotalDiffPcs !== 0 ? grandTotalDiffPcs : '-'}</td>
+          <td class="p-1.5 text-right mono-num font-black">${totalSysVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
+          <td class="p-1.5 text-right mono-num font-black">${totalActVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
           <td class="p-1.5 text-right mono-num font-black ${Math.abs(totalDiffVal) < 0.01 ? 'text-slate-800' : (totalDiffVal < 0 ? 'text-rose-600' : 'text-emerald-700')}">${totalDiffVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
           <td></td>
         </tr>

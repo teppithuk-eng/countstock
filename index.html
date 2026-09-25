@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -714,7 +714,7 @@
     const SESSION_DURATION = 12 * 60 * 60 * 1000;
 
     // ==========================================
-    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (อัปเกรดปลดล็อกสิทธิ์)
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (อัปเกรดแก้เสียงแตก + ปลดล็อก TTS)
     // ==========================================
     let isAudioUnlocked = false;
     let audioCtx = null;
@@ -730,7 +730,8 @@
           audioCtx.resume();
         }
         if ('speechSynthesis' in window) {
-          const silentUtterance = new SpeechSynthesisUtterance('');
+          const silentUtterance = new SpeechSynthesisUtterance('พร้อม');
+          silentUtterance.volume = 0.01;
           window.speechSynthesis.speak(silentUtterance);
         }
         isAudioUnlocked = true;
@@ -743,21 +744,28 @@
     window.addEventListener('touchstart', unlockAudioEngine, { once: true });
     window.addEventListener('click', unlockAudioEngine, { once: true });
 
-    // 1. เสียงตี๊ดยาว 1 ครั้ง (พบสินค้าในระบบ)
+    // 1. เสียงตี๊ดยาว 1 ครั้ง (มี Fade Out นุ่มนวล ไม่แตกซ่า)
     function playSuccessBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
+        const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
+        
         osc.type = "sine";
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // โน้ต A5 เสียงใส
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.35); // ตี๊ดยาว 0.35 วิ
+        osc.frequency.setValueAtTime(880, now); // โน้ต A5 เสียงใส
+        
+        // Attack & Decay Smooth Fade
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+        
+        osc.start(now);
+        osc.stop(now + 0.32);
       } catch(e) {}
     }
 
@@ -768,48 +776,64 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
         const now = audioCtx.currentTime;
+        
+        // ครั้งที่ 1
         const osc1 = audioCtx.createOscillator();
         const gain1 = audioCtx.createGain();
         osc1.connect(gain1);
         gain1.connect(audioCtx.destination);
-        osc1.type = "sawtooth";
-        osc1.frequency.setValueAtTime(320, now);
-        gain1.gain.setValueAtTime(0.4, now);
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(330, now);
+        gain1.gain.setValueAtTime(0.01, now);
+        gain1.gain.exponentialRampToValueAtTime(0.3, now + 0.03);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc1.start(now);
-        osc1.stop(now + 0.35);
+        osc1.stop(now + 0.27);
 
+        // ครั้งที่ 2
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.connect(gain2);
         gain2.connect(audioCtx.destination);
-        osc2.type = "sawtooth";
-        osc2.frequency.setValueAtTime(320, now + 0.45);
-        gain2.gain.setValueAtTime(0.4, now + 0.45);
-        osc2.start(now + 0.45);
-        osc2.stop(now + 0.80);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(330, now + 0.35);
+        gain2.gain.setValueAtTime(0.01, now + 0.35);
+        gain2.gain.exponentialRampToValueAtTime(0.3, now + 0.38);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.60);
+        osc2.start(now + 0.35);
+        osc2.stop(now + 0.62);
       } catch(e) {}
     }
 
-    // 3. ฟังก์ชันขานเสียงภาษาไทย
+    // 3. ฟังก์ชันขานเสียงภาษาไทย (บังคับอ่านเป็นคำไทย ชัดเจน)
     function speakText(text) {
       try {
         if (!('speechSynthesis' in window)) return;
         
-        window.speechSynthesis.cancel(); // ล้างคิวเสียงค้าง
+        // หน่วงเวลาเล็กน้อยเพื่อให้เสียงบี๊บดังเสร็จก่อน
+        setTimeout(() => {
+          window.speechSynthesis.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(String(text));
-        utterance.lang = 'th-TH';
-        utterance.rate = 1.1;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
+          // เติมคำว่า "ยอด" นำหน้าเพื่อให้ TTS ภาษาไทยบังคับอ่านเป็นตัวเลขไทยแน่นอน
+          let phrase = String(text);
+          if (!isNaN(text)) {
+            phrase = `ยอด ${text}`;
+          }
 
-        const voices = window.speechSynthesis.getVoices();
-        const thVoice = voices.find(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
-        if (thVoice) {
-          utterance.voice = thVoice;
-        }
+          const utterance = new SpeechSynthesisUtterance(phrase);
+          utterance.lang = 'th-TH';
+          utterance.rate = 1.15;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
 
-        window.speechSynthesis.speak(utterance);
+          const voices = window.speechSynthesis.getVoices();
+          const thVoice = voices.find(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
+          if (thVoice) {
+            utterance.voice = thVoice;
+          }
+
+          window.speechSynthesis.speak(utterance);
+        }, 120);
       } catch(e) {
         console.warn("Speech error:", e);
       }
@@ -1839,7 +1863,7 @@
         adjustBox(idx, 1);
         highlightRow(currentItems[idx].itemCode);
 
-        // อ่านยอดนับสะสมล่าสุด
+        // อ่านยอดนับสะสมล่าสุดของสินค้านั้น
         const currentCount = currentItems[idx].actBox || 0;
         speakText(currentCount);
 

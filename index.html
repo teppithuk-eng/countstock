@@ -175,6 +175,35 @@
         </div>
       </div>
 
+      <!-- 📢 แบนเนอร์แสดงสรุปยอดรวมระบบที่มีก่อนเริ่มตรวจนับ -->
+      <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-50 border border-amber-300/80 rounded-2xl p-3 shadow-sm">
+        <div class="flex items-center justify-between mb-1.5 border-b border-amber-200/60 pb-1">
+          <div class="flex items-center gap-1.5">
+            <span class="text-base">📋</span>
+            <span class="text-xs font-black text-amber-950 uppercase tracking-tight">สรุปยอดรวมระบบที่มีก่อนตรวจนับ (Baseline Snapshot)</span>
+          </div>
+          <span id="bannerLocText" class="text-[11px] font-black text-orange-700 bg-white px-2 py-0.5 rounded-lg border border-orange-200 shadow-xs"></span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left pt-1">
+          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">จำนวนรายการสินค้า</div>
+            <div id="bannerItemCount" class="text-sm sm:text-base font-black text-slate-800 mono-num">0 รายการ</div>
+          </div>
+          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">ยอดรวม (กล่องเต็ม)</div>
+            <div id="bannerTotalBoxes" class="text-sm sm:text-base font-black text-slate-800 mono-num">0 กล่อง</div>
+          </div>
+          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">ยอดรวม (เศษชิ้นสะสม)</div>
+            <div id="bannerTotalPcs" class="text-sm sm:text-base font-black text-amber-800 mono-num">0 ชิ้น</div>
+          </div>
+          <div class="bg-white/80 border border-amber-200/80 rounded-xl p-2">
+            <div class="text-[10px] text-slate-500 font-bold uppercase">มูลค่าสต๊อกระบบรวม</div>
+            <div id="bannerTotalVal" class="text-sm sm:text-base font-black text-orange-600 mono-num">0.00 ฿</div>
+          </div>
+        </div>
+      </div>
+
       <div id="tableContainer" class="hidden">
         <!-- แถบสวิตช์เลือกโหมดตรวจนับ -->
         <div class="bg-slate-100 p-1 rounded-2xl mb-2.5 flex items-center border border-slate-200">
@@ -202,7 +231,7 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (เพิ่มแสดงจำนวนรวมกล่อง/ชิ้น) -->
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (แสดงจำนวนรวมและมูลค่า) -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
@@ -768,6 +797,7 @@
       document.body.classList.add("justify-center");
       document.getElementById("loginBox").classList.remove("hidden");
       document.getElementById("tableContainer").classList.add("hidden");
+      document.getElementById("preAuditSummaryBanner").classList.add("hidden");
       stopScanner();
     }
 
@@ -871,6 +901,10 @@
         currentItems = res.items || [];
         itemMasterCache = res.allMaster || {};
         currentFocusIndex = 0;
+
+        // คำนวณและแสดงแบนเนอร์ยอดรวมก่อนตรวจนับ
+        renderPreAuditSummary(loc);
+
         populateGroupFilter();
         renderTable();
         if (currentCountMode === 'focus') renderFocusCard();
@@ -878,6 +912,30 @@
       } catch (err) {
         alert("ไม่สามารถโหลดสต๊อกได้: " + err.message);
       }
+    }
+
+    // แสดงสรุปยอดรวมระบบที่มีอยู่จริงก่อนตรวจนับ
+    function renderPreAuditSummary(locationName) {
+      let bTotalBoxes = 0;
+      let bTotalPcs = 0;
+      let bTotalVal = 0;
+
+      currentItems.forEach(item => {
+        const packSize = Number(item.packSize) || 1;
+        const price = Number(item.price) || 0;
+        const sysParsed = parseStockValue(item.sysStock, packSize);
+
+        bTotalBoxes += sysParsed.box;
+        bTotalPcs += sysParsed.pcs;
+        bTotalVal += (Number(item.sysStock) || 0) * price;
+      });
+
+      document.getElementById("bannerLocText").innerText = locationName;
+      document.getElementById("bannerItemCount").innerText = `${currentItems.length} รายการ`;
+      document.getElementById("bannerTotalBoxes").innerText = `${bTotalBoxes.toLocaleString()} กล่อง`;
+      document.getElementById("bannerTotalPcs").innerText = `${bTotalPcs.toLocaleString()} ชิ้น`;
+      document.getElementById("bannerTotalVal").innerText = `${bTotalVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿`;
+      document.getElementById("preAuditSummaryBanner").classList.remove("hidden");
     }
 
     function populateGroupFilter() {
@@ -1371,7 +1429,6 @@
       }
     }
 
-    // ฟังก์ชันคำนวณยอดเงินและจำนวนชิ้น/กล่องรวม
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
@@ -1669,6 +1726,61 @@
       }
     }
 
+    // ฟังก์ชันส่งผลการตรวจนับกลับเข้าห้องแชต LINE
+    async function sendAuditReportToLine(payload, timestamp) {
+      if (typeof liff === "undefined" || !liff.isInClient || !liff.isInClient()) {
+        return;
+      }
+
+      let totalSysVal = 0;
+      let totalActVal = 0;
+      let totalDiffVal = 0;
+      let totalDiffPcs = 0;
+
+      payload.items.forEach(item => {
+        const packSize = Number(item.packSize) || 1;
+        const price = Number(item.price) || 0;
+        const sysParsed = parseStockValue(item.sysStock, packSize);
+        const actBox = Number(item.actBox) || 0;
+        const actPcs = Number(item.actPcs) || 0;
+        const actTotalPcs = (actBox * packSize) + actPcs;
+        const diffPcs = actTotalPcs - sysParsed.totalPcs;
+        const diffVal = (diffPcs / packSize) * price;
+
+        totalSysVal += (Number(item.sysStock) || 0) * price;
+        totalActVal += (actTotalPcs / packSize) * price;
+        totalDiffVal += diffVal;
+        totalDiffPcs += diffPcs;
+      });
+
+      const diffSign = totalDiffVal > 0.01 ? "+" : "";
+      const statusIcon = Math.abs(totalDiffVal) < 0.01 ? "🟢 ยอดตรงครบถ้วน" : (totalDiffVal < 0 ? "🔴 สต๊อกขาด (ต้องเปิดบิล)" : "🟡 สินค้าเกิน");
+
+      const messageText = 
+`📦 บันทึกตรวจนับสต๊อกเรียบร้อยแล้ว
+--------------------------
+🏢 ทะเบียน/คลัง: ${payload.location}
+👤 ผู้นับสต๊อก: ${payload.auditor}
+⏰ วัน-เวลา: ${timestamp}
+📊 รายการสินค้า: ${payload.items.length} รายการ
+
+💰 สต๊อกระบบ: ${totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
+💰 นับได้จริง: ${totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
+⚖️ ผลต่างสุทธิ: ${diffSign}${totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿
+📌 สถานะ: ${statusIcon}
+--------------------------
+✅ ข้อมูลถูกบันทึกลงระบบเรียบร้อย`;
+
+      try {
+        await liff.sendMessages([{
+          type: "text",
+          text: messageText
+        }]);
+      } catch (err) {
+        console.warn("ไม่สามารถส่งข้อความเข้าห้องแชต LINE อัตโนมัติได้:", err);
+      }
+    }
+
     async function submitData(onlyCurrentGroup) {
       const location = document.getElementById("locSelect").value;
       const auditor = document.getElementById("auditorInput").value.trim();
@@ -1710,6 +1822,9 @@
         saveBtn.innerText = "💾 บันทึกผลการตรวจนับทั้งหมด";
 
         if (res && res.success) {
+          // ส่งการ์ดสรุปเข้าห้องแชต LINE
+          await sendAuditReportToLine(payload, res.timestamp);
+
           alert(isEditMode ? "อัปเดตการแก้ไขสต๊อกสำเร็จเรียบร้อยแล้ว!" : (onlyCurrentGroup ? `บันทึกกลุ่ม "${selectedGroup}" สำเร็จแล้ว!` : "บันทึกข้อมูลทุกรายการสำเร็จเรียบร้อยแล้ว!"));
           isEditMode = false;
           originalAuditDate = "";
@@ -1862,6 +1977,8 @@
             isExtra: item.remark === "ไม่มีเลขในระบบ"
           }));
 
+          renderPreAuditSummary(loc);
+
           document.getElementById("tableContainer").classList.remove("hidden");
           populateGroupFilter();
           renderTable();
@@ -1881,6 +1998,7 @@
         originalAuditDate = "";
         document.getElementById("editModeAlert").classList.add("hidden");
         document.getElementById("tableContainer").classList.add("hidden");
+        document.getElementById("preAuditSummaryBanner").classList.add("hidden");
         currentItems = [];
       }
     }
@@ -2162,7 +2280,6 @@
         appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysBoxSum, grpSysPcsSum, grpActBoxSum, grpActPcsSum, grpDiffBoxSum, grpDiffPcsSum);
       }
 
-      // แสดงแถวรวมทั้งสิ้น (Grand Total) พร้อมยอดรวมกล่อง/ชิ้น
       tfoot.innerHTML = `
         <tr class="bg-orange-100/70 border-t-2 border-slate-800 text-slate-900 font-black">
           <td colspan="4" class="p-1.5 text-right font-bold uppercase">รวมทั้งสิ้น (Grand Total):</td>

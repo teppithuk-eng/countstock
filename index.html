@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -247,7 +247,7 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง -->
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (แสดงยอดเงินชัดเจน และใช้คำว่า "หน่วย" ทั้งหมด) -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
@@ -714,12 +714,41 @@
     const SESSION_DURATION = 12 * 60 * 60 * 1000;
 
     // ==========================================
-    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (อัปเกรดปลดล็อกสิทธิ์)
     // ==========================================
+    let isAudioUnlocked = false;
+    let audioCtx = null;
+
+    // ฟังก์ชันปลดล็อก AudioContext และ Speech บน Mobile/LINE
+    function unlockAudioEngine() {
+      if (isAudioUnlocked) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        if ('speechSynthesis' in window) {
+          const silentUtterance = new SpeechSynthesisUtterance('');
+          window.speechSynthesis.speak(silentUtterance);
+        }
+        isAudioUnlocked = true;
+      } catch(e) {
+        console.warn("Audio unlock error:", e);
+      }
+    }
+
+    // ปลดล็อกทันทีที่มีการแตะหน้าจอครั้งแรก
+    window.addEventListener('touchstart', unlockAudioEngine, { once: true });
+    window.addEventListener('click', unlockAudioEngine, { once: true });
+
     // 1. เสียงตี๊ดยาว 1 ครั้ง (พบสินค้าในระบบ)
     function playSuccessBeep() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
@@ -735,43 +764,55 @@
     // 2. เสียงตี๊ดยาวต่ำ 2 ครั้ง (ไม่พบใน Item Master)
     function playErrorBeep() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // ครั้งที่ 1
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
         const osc1 = audioCtx.createOscillator();
         const gain1 = audioCtx.createGain();
         osc1.connect(gain1);
         gain1.connect(audioCtx.destination);
         osc1.type = "sawtooth";
-        osc1.frequency.setValueAtTime(320, audioCtx.currentTime);
-        gain1.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        osc1.start(audioCtx.currentTime);
-        osc1.stop(audioCtx.currentTime + 0.35);
+        osc1.frequency.setValueAtTime(320, now);
+        gain1.gain.setValueAtTime(0.4, now);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
 
-        // ครั้งที่ 2
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.connect(gain2);
         gain2.connect(audioCtx.destination);
         osc2.type = "sawtooth";
-        osc2.frequency.setValueAtTime(320, audioCtx.currentTime + 0.45);
-        gain2.gain.setValueAtTime(0.4, audioCtx.currentTime + 0.45);
-        osc2.start(audioCtx.currentTime + 0.45);
-        osc2.stop(audioCtx.currentTime + 0.80);
+        osc2.frequency.setValueAtTime(320, now + 0.45);
+        gain2.gain.setValueAtTime(0.4, now + 0.45);
+        osc2.start(now + 0.45);
+        osc2.stop(now + 0.80);
       } catch(e) {}
     }
 
     // 3. ฟังก์ชันขานเสียงภาษาไทย
     function speakText(text) {
       try {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(String(text));
-          utterance.lang = 'th-TH';
-          utterance.rate = 1.15;
-          window.speechSynthesis.speak(utterance);
+        if (!('speechSynthesis' in window)) return;
+        
+        window.speechSynthesis.cancel(); // ล้างคิวเสียงค้าง
+
+        const utterance = new SpeechSynthesisUtterance(String(text));
+        utterance.lang = 'th-TH';
+        utterance.rate = 1.1;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const thVoice = voices.find(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
+        if (thVoice) {
+          utterance.voice = thVoice;
         }
-      } catch(e) {}
+
+        window.speechSynthesis.speak(utterance);
+      } catch(e) {
+        console.warn("Speech error:", e);
+      }
     }
 
     // ==========================================

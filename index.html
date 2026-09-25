@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -705,6 +705,9 @@
     let html5QrCode = null;
     let isScanning = false;
 
+    // ตัวแปรล็อกคุมจังหวะการสแกน ไม่ให้รัวติดกัน
+    let isScanLocked = false;
+
     let currentCountMode = 'table';
     let currentFocusIndex = 0;
 
@@ -730,7 +733,7 @@
           audioCtx.resume();
         }
         if ('speechSynthesis' in window) {
-          const silentUtterance = new SpeechSynthesisUtterance('พร้อม');
+          const silentUtterance = new SpeechSynthesisUtterance('');
           silentUtterance.volume = 0.01;
           window.speechSynthesis.speak(silentUtterance);
         }
@@ -757,9 +760,8 @@
         gain.connect(audioCtx.destination);
         
         osc.type = "sine";
-        osc.frequency.setValueAtTime(880, now); // โน้ต A5 เสียงใส
+        osc.frequency.setValueAtTime(880, now);
         
-        // Attack & Decay Smooth Fade
         gain.gain.setValueAtTime(0.01, now);
         gain.gain.exponentialRampToValueAtTime(0.25, now + 0.03);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
@@ -805,16 +807,14 @@
       } catch(e) {}
     }
 
-    // 3. ฟังก์ชันขานเสียงภาษาไทย (บังคับอ่านเป็นคำไทย ชัดเจน)
+    // 3. ฟังก์ชันขานเสียงภาษาไทย
     function speakText(text) {
       try {
         if (!('speechSynthesis' in window)) return;
         
-        // หน่วงเวลาเล็กน้อยเพื่อให้เสียงบี๊บดังเสร็จก่อน
         setTimeout(() => {
           window.speechSynthesis.cancel();
 
-          // เติมคำว่า "ยอด" นำหน้าเพื่อให้ TTS ภาษาไทยบังคับอ่านเป็นตัวเลขไทยแน่นอน
           let phrase = String(text);
           if (!isNaN(text)) {
             phrase = `ยอด ${text}`;
@@ -1013,7 +1013,7 @@
       }
       const val = Number(decimalVal);
       if (packSize <= 1) {
-        return { box: Math.round(val), pcs: 0, totalPcs: Math.round(val) };
+        return { box: 0, pcs: Math.round(val), totalPcs: Math.round(val) };
       }
       const box = Math.floor(val);
       const fraction = val - box;
@@ -1849,11 +1849,14 @@
       }
     }
 
-    // 4. สแกนได้ทั้ง Item Code และ Barcode สากล พร้อมเสียงขาน/เตือน
+    // 4. สแกนได้ทั้ง Item Code และ Barcode สากล พร้อมระบบหน่วงจังหวะ
     function processBarcodeCount(barcode) {
+      if (isScanLocked) return;
+      isScanLocked = true;
+
       const cleanCode = barcode.trim().toUpperCase();
 
-      // ค้นหาในรายการที่กำลังตรวจนับ (เทียบทั้ง Item Code และ Barcode)
+      // ค้นหาในรายการที่กำลังตรวจนับ
       const idx = currentItems.findIndex(i => 
         i.itemCode.toUpperCase() === cleanCode || (i.barcode && i.barcode.toUpperCase() === cleanCode)
       );
@@ -1863,11 +1866,13 @@
         adjustBox(idx, 1);
         highlightRow(currentItems[idx].itemCode);
 
-        // อ่านยอดนับสะสมล่าสุดของสินค้านั้น
         const currentCount = currentItems[idx].actBox || 0;
         speakText(currentCount);
 
         autoSaveDraft();
+
+        // หน่วงเวลา 1.5 วินาทีเพื่อเปิดทางให้เสียงอ่านตัวเลขทำงานจนจบ
+        setTimeout(() => { isScanLocked = false; }, 1500);
         return;
       }
 
@@ -1893,10 +1898,11 @@
         playErrorBeep();
         speakText("ไม่พบสินค้า");
         alert(`❌ ไม่พบข้อมูลในระบบ (Item Master)\n\nรหัส/บาร์โค้ด: "${cleanCode}"\nกรุณาตรวจเช็คกล่องสินค้า หรือแจ้งฝ่ายสต๊อกเพื่อเพิ่มสินค้าเข้าระบบ`);
+        setTimeout(() => { isScanLocked = false; }, 1500);
         return;
       }
 
-      // พบใน Master (แต่ไม่มีบนรถตั้งแต่แรก ให้ดึงมาสร้างเป็นสินค้าเกิน)
+      // พบใน Master ดึงมาสร้างเป็นสินค้าเกิน
       playSuccessBeep();
       currentItems.push({
         itemCode: masterItemCode,
@@ -1921,6 +1927,8 @@
       renderTable();
       highlightRow(masterItemCode);
       autoSaveDraft();
+
+      setTimeout(() => { isScanLocked = false; }, 1500);
     }
 
     function addExtraItem() {

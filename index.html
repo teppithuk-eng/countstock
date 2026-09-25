@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (ระบุเป็น "หน่วย" ไม่ระบุกล่องให้สับสน) -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -247,7 +247,7 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (แสดงยอดเงินชัดเจน และใช้คำว่า "หน่วย" ทั้งหมด) -->
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
@@ -714,6 +714,67 @@
     const SESSION_DURATION = 12 * 60 * 60 * 1000;
 
     // ==========================================
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE
+    // ==========================================
+    // 1. เสียงตี๊ดยาว 1 ครั้ง (พบสินค้าในระบบ)
+    function playSuccessBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // โน้ต A5 เสียงใส
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35); // ตี๊ดยาว 0.35 วิ
+      } catch(e) {}
+    }
+
+    // 2. เสียงตี๊ดยาวต่ำ 2 ครั้ง (ไม่พบใน Item Master)
+    function playErrorBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // ครั้งที่ 1
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.type = "sawtooth";
+        osc1.frequency.setValueAtTime(320, audioCtx.currentTime);
+        gain1.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        osc1.start(audioCtx.currentTime);
+        osc1.stop(audioCtx.currentTime + 0.35);
+
+        // ครั้งที่ 2
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = "sawtooth";
+        osc2.frequency.setValueAtTime(320, audioCtx.currentTime + 0.45);
+        gain2.gain.setValueAtTime(0.4, audioCtx.currentTime + 0.45);
+        osc2.start(audioCtx.currentTime + 0.45);
+        osc2.stop(audioCtx.currentTime + 0.80);
+      } catch(e) {}
+    }
+
+    // 3. ฟังก์ชันขานเสียงภาษาไทย
+    function speakText(text) {
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(String(text));
+          utterance.lang = 'th-TH';
+          utterance.rate = 1.15;
+          window.speechSynthesis.speak(utterance);
+        }
+      } catch(e) {}
+    }
+
+    // ==========================================
     // 🚀 BRIDGE API: สื่อสารกับ Google Apps Script
     // ==========================================
     async function callGasApi(action, params = {}, method = "GET") {
@@ -819,18 +880,7 @@
     }
 
     function playBeep() {
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(1046.50, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
-      } catch(e) {}
+      playSuccessBeep();
     }
 
     function switchTab(tab) {
@@ -1543,6 +1593,7 @@
       }
     }
 
+    // คำนวณสรุปยอดเงินและรวมหน่วยเต็ม (Units)
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
@@ -1733,38 +1784,77 @@
       }
     }
 
-    // 4. สแกนได้ทั้ง Item Code และ Barcode สากล
+    // 4. สแกนได้ทั้ง Item Code และ Barcode สากล พร้อมเสียงขาน/เตือน
     function processBarcodeCount(barcode) {
-      playBeep();
+      const cleanCode = barcode.trim().toUpperCase();
+
+      // ค้นหาในรายการที่กำลังตรวจนับ (เทียบทั้ง Item Code และ Barcode)
       const idx = currentItems.findIndex(i => 
-        i.itemCode.toUpperCase() === barcode || (i.barcode && i.barcode.toUpperCase() === barcode)
+        i.itemCode.toUpperCase() === cleanCode || (i.barcode && i.barcode.toUpperCase() === cleanCode)
       );
 
       if (idx !== -1) {
+        playSuccessBeep();
         adjustBox(idx, 1);
         highlightRow(currentItems[idx].itemCode);
-      } else {
-        const master = itemMasterCache[barcode] || { name: "ไม่พบใน Item Master", group: "อื่นๆ (เพิ่มนอกระบบ)", price: 0, uom: "EA", packSize: 1 };
-        currentItems.push({
-          itemCode: barcode,
-          barcode: barcode,
-          itemName: master.name,
-          itemGroup: master.group || "อื่นๆ (เพิ่มนอกระบบ)",
-          price: master.price || 0,
-          uom: master.uom || "EA",
-          packSize: master.packSize || 1,
-          sysStock: 0,
-          actBox: 1,
-          actPcs: 0,
-          diffDecimal: 1,
-          remark: "ไม่มีเลขในระบบ",
-          isExtra: true
-        });
-        currentItems.sort((a, b) => a.itemGroup.localeCompare(b.itemGroup, 'th'));
-        populateGroupFilter();
-        renderTable();
-        highlightRow(barcode);
+
+        // อ่านยอดนับสะสมล่าสุด
+        const currentCount = currentItems[idx].actBox || 0;
+        speakText(currentCount);
+
+        autoSaveDraft();
+        return;
       }
+
+      // ตรวจสอบกับ Item Master
+      let foundInMaster = null;
+      let masterItemCode = "";
+
+      if (itemMasterCache[cleanCode]) {
+        foundInMaster = itemMasterCache[cleanCode];
+        masterItemCode = cleanCode;
+      } else {
+        for (const code in itemMasterCache) {
+          if (itemMasterCache[code].barcode && itemMasterCache[code].barcode.toUpperCase() === cleanCode) {
+            foundInMaster = itemMasterCache[code];
+            masterItemCode = code;
+            break;
+          }
+        }
+      }
+
+      // ถ้าไม่มีใน Item Master เลย
+      if (!foundInMaster) {
+        playErrorBeep();
+        speakText("ไม่พบสินค้า");
+        alert(`❌ ไม่พบข้อมูลในระบบ (Item Master)\n\nรหัส/บาร์โค้ด: "${cleanCode}"\nกรุณาตรวจเช็คกล่องสินค้า หรือแจ้งฝ่ายสต๊อกเพื่อเพิ่มสินค้าเข้าระบบ`);
+        return;
+      }
+
+      // พบใน Master (แต่ไม่มีบนรถตั้งแต่แรก ให้ดึงมาสร้างเป็นสินค้าเกิน)
+      playSuccessBeep();
+      currentItems.push({
+        itemCode: masterItemCode,
+        barcode: foundInMaster.barcode || cleanCode,
+        itemName: foundInMaster.name,
+        itemGroup: foundInMaster.group || "อื่นๆ",
+        price: foundInMaster.price || 0,
+        uom: foundInMaster.uom || "EA",
+        packSize: foundInMaster.packSize || 1,
+        sysStock: 0,
+        actBox: 1,
+        actPcs: 0,
+        diffDecimal: 1,
+        remark: "สินค้าเกินนอกระบบ",
+        isExtra: true
+      });
+
+      speakText(1);
+
+      currentItems.sort((a, b) => a.itemGroup.localeCompare(b.itemGroup, 'th'));
+      populateGroupFilter();
+      renderTable();
+      highlightRow(masterItemCode);
       autoSaveDraft();
     }
 
@@ -1956,7 +2046,6 @@
         saveGroupBtn.disabled = false;
 
         if (res && res.success) {
-          // ลบข้อมูลดราฟต์ที่เซฟค้างไว้
           clearDraftData();
 
           await sendAuditReportToLine(payload, res.timestamp);

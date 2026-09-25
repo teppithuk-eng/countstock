@@ -19,9 +19,7 @@
       -webkit-appearance: none; 
       margin: 0; 
     }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
+    input[type=number] { -moz-appearance: textfield; }
 
     .group-row-print {
       background-color: #ffedd5 !important;
@@ -82,6 +80,12 @@
 </head>
 <body class="bg-slate-100/80 min-h-screen text-slate-800 p-1.5 sm:p-4 md:p-6 flex flex-col justify-center items-center select-none">
 
+  <!-- Fullscreen Loading Overlay ป้องกันการกดซ้ำ -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex flex-col items-center justify-center gap-3 hidden text-white">
+    <div class="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+    <div id="loadingText" class="text-sm font-bold tracking-wide">กำลังประมวลผล...</div>
+  </div>
+
   <!-- 1. กล่อง Login -->
   <div id="loginBox" class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl shadow-xl p-8 text-center no-print relative overflow-hidden hidden">
     <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600"></div>
@@ -128,6 +132,22 @@
       </div>
     </div>
 
+    <!-- แถบแจ้งเตือนพบข้อมูลร่างที่นับค้างไว้ -->
+    <div id="draftAlert" class="hidden mb-3 bg-amber-50 border border-amber-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between shadow-xs">
+      <div class="flex items-center gap-2 text-amber-900 text-[11px] sm:text-xs font-bold">
+        <span class="text-base">💾</span>
+        <span>พบรายการนับค้างไว้ของคลัง <span id="draftLocText" class="underline font-black"></span> (กู้คืนได้)</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button onclick="restoreDraftData()" class="text-[10px] sm:text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-xl font-bold transition shadow-xs">
+          ดึงยอดคืน
+        </button>
+        <button onclick="clearDraftData()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
+          ✕ ลบทิ้ง
+        </button>
+      </div>
+    </div>
+
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
@@ -155,7 +175,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">ทะเบียนรถ / คลังสาขา (Target Location)</label>
-            <select id="locSelect" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 font-medium text-xs sm:text-sm focus:outline-none shadow-sm">
+            <select id="locSelect" onchange="checkDraftForSelectedLoc()" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 font-medium text-xs sm:text-sm focus:outline-none shadow-sm">
               <option value="">-- กำลังโหลดข้อมูลคลัง/รถ... --</option>
             </select>
           </div>
@@ -398,7 +418,7 @@
 
         <div class="mb-3 p-2.5 border border-dashed border-amber-300 bg-amber-50/60 rounded-2xl flex flex-col sm:flex-row gap-2 items-center">
           <div class="text-xs font-bold text-amber-900 uppercase whitespace-nowrap">➕ สินค้าเกินนอกระบบ:</div>
-          <input type="text" id="addItemCode" placeholder="ระบุ Item Code" class="w-full sm:w-2/3 bg-white border border-amber-300 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-mono uppercase focus:border-orange-500 focus:outline-none">
+          <input type="text" id="addItemCode" placeholder="ระบุ Item Code หรือ Barcode" class="w-full sm:w-2/3 bg-white border border-amber-300 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-mono uppercase focus:border-orange-500 focus:outline-none">
           <button onclick="addExtraItem()" class="w-full sm:w-1/3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold py-1.5 rounded-xl text-xs uppercase shadow-sm transition">
             เพิ่มเข้ารายการ
           </button>
@@ -506,7 +526,7 @@
     </div>
   </div>
 
-  <!-- 3. หน้าพิมพ์รายงาน A4 แนวนอน (Landscape Report View) -->
+  <!-- 3. หน้าพิมพ์รายงาน A4 แนวนอน -->
   <div id="printReportView" class="hidden w-full bg-white text-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-300 shadow-xl">
     <div class="w-full border-b-2 border-orange-500 pb-2 mb-2 flex justify-between items-start">
       <div>
@@ -600,7 +620,7 @@
     </div>
   </div>
 
-  <!-- 4. หน้าพิมพ์ใบตรวจนับเปล่า A4 แนวนอน (Blank Physical Count Sheet) -->
+  <!-- 4. หน้าพิมพ์ใบตรวจนับเปล่า A4 แนวนอน -->
   <div id="printBlankSheetView" class="hidden w-full bg-white text-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-300 shadow-xl">
     <div class="w-full border-b-2 border-slate-800 pb-2 mb-2 flex justify-between items-start">
       <div>
@@ -794,6 +814,7 @@
       document.getElementById("loginBox").classList.remove("hidden");
       document.getElementById("tableContainer").classList.add("hidden");
       document.getElementById("preAuditSummaryBanner").classList.add("hidden");
+      document.getElementById("draftAlert").classList.add("hidden");
       stopScanner();
     }
 
@@ -871,7 +892,6 @@
       }
     }
 
-    // ฟังก์ชันถอดค่ากล่องและเศษตาม packSize ของแต่ละรายการ (คงเดิม 100% ไม่กระทบตาราง)
     function parseStockValue(decimalVal, packSize) {
       if (decimalVal === null || decimalVal === undefined || isNaN(decimalVal)) {
         return { box: 0, pcs: 0, totalPcs: 0 };
@@ -890,11 +910,13 @@
       const loc = document.getElementById("locSelect").value;
       if (!loc) return alert("กรุณาเลือก ทะเบียนรถ / คลังสาขา");
 
+      showLoading("กำลังโหลดข้อมูลสต๊อกคงเหลือ...");
       document.getElementById("stockTableBody").innerHTML = '<tr><td colspan="8" class="text-center py-8 text-orange-600 font-medium">กำลังโหลดข้อมูลสต๊อกคงเหลือ...</td></tr>';
       document.getElementById("tableContainer").classList.remove("hidden");
 
       try {
         const res = await callGasApi("getStock", { location: loc });
+        hideLoading();
         currentItems = res.items || [];
         itemMasterCache = res.allMaster || {};
         currentFocusIndex = 0;
@@ -903,13 +925,110 @@
         populateGroupFilter();
         renderTable();
         if (currentCountMode === 'focus') renderFocusCard();
+        
+        checkDraftForSelectedLoc();
         if (callback) callback();
       } catch (err) {
+        hideLoading();
         alert("ไม่สามารถโหลดสต๊อกได้: " + err.message);
       }
     }
 
-    // แสดงสรุปยอดรวมระบบที่มีอยู่จริงก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม และมูลค่า)
+    // 1. ระบบจำค่าร่างอัตโนมัติ (Local Draft Auto-save & Restore)
+    function autoSaveDraft() {
+      const loc = document.getElementById("locSelect").value;
+      if (!loc || currentItems.length === 0 || isEditMode) return;
+
+      const draftPayload = {
+        location: loc,
+        timestamp: new Date().getTime(),
+        items: currentItems.map(i => ({
+          itemCode: i.itemCode,
+          actBox: i.actBox,
+          actPcs: i.actPcs,
+          remark: i.remark,
+          isExtra: i.isExtra
+        }))
+      };
+      localStorage.setItem(`wsg_draft_${loc}`, JSON.stringify(draftPayload));
+    }
+
+    function checkDraftForSelectedLoc() {
+      const loc = document.getElementById("locSelect").value;
+      const alertBox = document.getElementById("draftAlert");
+      if (!loc) {
+        alertBox.classList.add("hidden");
+        return;
+      }
+
+      const draftRaw = localStorage.getItem(`wsg_draft_${loc}`);
+      if (draftRaw) {
+        document.getElementById("draftLocText").innerText = loc;
+        alertBox.classList.remove("hidden");
+      } else {
+        alertBox.classList.add("hidden");
+      }
+    }
+
+    function restoreDraftData() {
+      const loc = document.getElementById("locSelect").value;
+      const draftRaw = localStorage.getItem(`wsg_draft_${loc}`);
+      if (!draftRaw) return;
+
+      try {
+        const draft = JSON.parse(draftRaw);
+        draft.items.forEach(dItem => {
+          const target = currentItems.find(i => i.itemCode === dItem.itemCode);
+          if (target) {
+            target.actBox = dItem.actBox;
+            target.actPcs = dItem.actPcs;
+            target.remark = dItem.remark;
+          }
+        });
+        renderTable();
+        if (currentCountMode === 'focus') renderFocusCard();
+        document.getElementById("draftAlert").classList.add("hidden");
+        alert("กู้คืนข้อมูลที่นับค้างไว้เรียบร้อยแล้ว");
+      } catch (e) {
+        console.error("Draft restore error:", e);
+      }
+    }
+
+    function clearDraftData() {
+      const loc = document.getElementById("locSelect").value;
+      if (loc) {
+        localStorage.removeItem(`wsg_draft_${loc}`);
+      }
+      document.getElementById("draftAlert").classList.add("hidden");
+    }
+
+    // 2. ดึงพิกัด GPS หน้างาน
+    function getDeviceCoordinates() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve("");
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            resolve(`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`);
+          },
+          () => { resolve(""); },
+          { timeout: 5000, enableHighAccuracy: true }
+        );
+      });
+    }
+
+    // 3. ควบคุม Overlay ป้องกันการกดซ้ำ
+    function showLoading(msg) {
+      document.getElementById("loadingText").innerText = msg || "กำลังประมวลผล...";
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+    }
+
+    function hideLoading() {
+      document.getElementById("loadingOverlay").classList.add("hidden");
+    }
+
     function renderPreAuditSummary(locationName) {
       let bTotalUnits = 0;
       let bTotalVal = 0;
@@ -992,6 +1111,7 @@
       item.actPcs = packSize > 1 ? sysParsed.pcs : "";
       updateRowDisplay(index);
       recalcSummary();
+      autoSaveDraft();
     }
 
     function fillMatchAllVisible() {
@@ -1019,6 +1139,7 @@
         }
       });
       recalcSummary();
+      autoSaveDraft();
       alert(`ดึงยอดตรงตามระบบเรียบร้อย ${count} รายการ`);
     }
 
@@ -1071,14 +1192,15 @@
       document.getElementById("focusItemName").innerText = `${item.itemName} (${item.uom})`;
       document.getElementById("focusItemPrice").innerText = `ราคา: ${(Number(item.price)||0).toLocaleString(undefined, {minimumFractionDigits:2})} ฿`;
 
-      document.getElementById("focusSysBox").innerText = `${sysParsed.box} ${isEA ? 'EA' : 'กล่อง'}`;
       if (!isEA) {
+        document.getElementById("focusSysBox").innerText = `${sysParsed.box} กล่อง`;
         document.getElementById("focusSysPcsBox").classList.remove("hidden");
         document.getElementById("focusSysPcs").innerText = `${sysParsed.pcs} ชิ้น`;
         document.getElementById("focusPcsContainer").classList.remove("hidden");
         document.getElementById("focusLabelBox").innerText = "กล่อง";
         document.getElementById("focusLabelPcs").innerText = `เศษ (/${packSize})`;
       } else {
+        document.getElementById("focusSysBox").innerText = `${sysParsed.box} EA`;
         document.getElementById("focusSysPcsBox").classList.add("hidden");
         document.getElementById("focusPcsContainer").classList.add("hidden");
         document.getElementById("focusLabelBox").innerText = "จำนวน (EA)";
@@ -1344,6 +1466,7 @@
           currentFocusIndex = 0;
           renderFocusCard();
         }
+        autoSaveDraft();
       }
     }
 
@@ -1420,7 +1543,6 @@
       }
     }
 
-    // คำนวณสรุปยอดเงินและรวมหน่วยเต็ม (Units) โดยไม่แตะต้องกลไกย่อย
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
@@ -1565,6 +1687,7 @@
 
       updateRowDisplay(index);
       recalcSummary();
+      autoSaveDraft();
     }
 
     function adjustBox(index, delta) {
@@ -1573,6 +1696,7 @@
       currentItems[index].actBox = newVal;
       updateRowDisplay(index);
       recalcSummary();
+      autoSaveDraft();
     }
 
     function adjustPiece(index, delta) {
@@ -1591,10 +1715,12 @@
       currentItems[index].actPcs = newVal;
       updateRowDisplay(index);
       recalcSummary();
+      autoSaveDraft();
     }
 
     function updateRemark(index, val) {
       currentItems[index].remark = val;
+      autoSaveDraft();
     }
 
     function handleGunScan(event) {
@@ -1607,9 +1733,12 @@
       }
     }
 
+    // 4. สแกนได้ทั้ง Item Code และ Barcode สากล
     function processBarcodeCount(barcode) {
       playBeep();
-      const idx = currentItems.findIndex(i => i.itemCode.toUpperCase() === barcode);
+      const idx = currentItems.findIndex(i => 
+        i.itemCode.toUpperCase() === barcode || (i.barcode && i.barcode.toUpperCase() === barcode)
+      );
 
       if (idx !== -1) {
         adjustBox(idx, 1);
@@ -1618,6 +1747,7 @@
         const master = itemMasterCache[barcode] || { name: "ไม่พบใน Item Master", group: "อื่นๆ (เพิ่มนอกระบบ)", price: 0, uom: "EA", packSize: 1 };
         currentItems.push({
           itemCode: barcode,
+          barcode: barcode,
           itemName: master.name,
           itemGroup: master.group || "อื่นๆ (เพิ่มนอกระบบ)",
           price: master.price || 0,
@@ -1635,12 +1765,13 @@
         renderTable();
         highlightRow(barcode);
       }
+      autoSaveDraft();
     }
 
     function addExtraItem() {
       const codeInput = document.getElementById("addItemCode");
       const barcode = codeInput.value.trim().toUpperCase();
-      if (!barcode) return alert("กรุณาระบุ Item Code");
+      if (!barcode) return alert("กรุณาระบุ Item Code หรือ Barcode");
 
       processBarcodeCount(barcode);
       codeInput.value = "";
@@ -1777,6 +1908,7 @@
       }
     }
 
+    // ฟังก์ชันบันทึกสต๊อก พร้อมพิกัด GPS และล็อคปุ่มป้องกันกดซ้ำ
     async function submitData(onlyCurrentGroup) {
       const location = document.getElementById("locSelect").value;
       const auditor = document.getElementById("auditorInput").value.trim();
@@ -1800,24 +1932,33 @@
         return;
       }
 
+      showLoading("กำลังจับพิกัดและบันทึกสต๊อก...");
+      const gpsCoordinates = await getDeviceCoordinates();
+
       const saveBtn = document.getElementById("saveBtn");
+      const saveGroupBtn = document.getElementById("saveGroupBtn");
       saveBtn.disabled = true;
-      saveBtn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+      saveGroupBtn.disabled = true;
 
       const payload = {
         location: location,
         auditor: auditor,
         items: targetItems,
         isEditMode: isEditMode,
-        originalDate: originalAuditDate
+        originalDate: originalAuditDate,
+        gps: gpsCoordinates
       };
 
       try {
         const res = await callGasApi("saveAudit", payload, "POST");
+        hideLoading();
         saveBtn.disabled = false;
-        saveBtn.innerText = "💾 บันทึกผลการตรวจนับทั้งหมด";
+        saveGroupBtn.disabled = false;
 
         if (res && res.success) {
+          // ลบข้อมูลดราฟต์ที่เซฟค้างไว้
+          clearDraftData();
+
           await sendAuditReportToLine(payload, res.timestamp);
           alert(isEditMode ? "อัปเดตการแก้ไขสต๊อกสำเร็จเรียบร้อยแล้ว!" : (onlyCurrentGroup ? `บันทึกกลุ่ม "${selectedGroup}" สำเร็จแล้ว!` : "บันทึกข้อมูลทุกรายการสำเร็จเรียบร้อยแล้ว!"));
           isEditMode = false;
@@ -1828,8 +1969,9 @@
           showErrorDetail("ฝั่งเซิร์ฟเวอร์แจ้งข้อผิดพลาด:\n" + (res ? res.error : "ไม่ได้รับผลลัพธ์ตอบกลับ"));
         }
       } catch (err) {
+        hideLoading();
         saveBtn.disabled = false;
-        saveBtn.innerText = "💾 บันทึกผลการตรวจนับทั้งหมด";
+        saveGroupBtn.disabled = false;
         showErrorDetail("เกิดข้อผิดพลาดในการเชื่อมต่อ:\n" + err.message);
       }
     }
@@ -1916,8 +2058,10 @@
 
       if (!loc || !date) return alert("กรุณาเลือก ทะเบียนรถ/คลัง และ รอบวัน-เวลาที่ตรวจนับ");
 
+      showLoading("กำลังดึงรายงาน...");
       try {
         const res = await callGasApi("getHistoryReport", { location: loc, date: date });
+        hideLoading();
         if (res && res.items) {
           renderReportView({
             location: loc,
@@ -1928,6 +2072,7 @@
           alert("ไม่พบข้อมูลรายงานสำหรับรายการที่เลือก");
         }
       } catch (err) {
+        hideLoading();
         alert("ดึงรายงานไม่สำเร็จ: " + err.message);
       }
     }
@@ -1940,8 +2085,10 @@
 
       if (!confirm(`⚠️ ยืนยันการดึงข้อมูลรอบวันที่-เวลา ${date} ของคลัง ${loc} กลับมาแก้ไขหรือไม่?`)) return;
 
+      showLoading("กำลังโหลดข้อมูลเพื่อแก้ไข...");
       try {
         const res = await callGasApi("getHistoryReport", { location: loc, date: date });
+        hideLoading();
         if (res && res.items && res.items.length > 0) {
           isEditMode = true;
           originalAuditDate = date;
@@ -1981,6 +2128,7 @@
           alert("ไม่พบข้อมูลสำหรับรอบวันที่เลือก");
         }
       } catch (err) {
+        hideLoading();
         alert("เกิดข้อผิดพลาดในการดึงข้อมูล: " + err.message);
       }
     }

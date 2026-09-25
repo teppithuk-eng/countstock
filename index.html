@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- LINE LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- HTML5 QR / Barcode Scanner (Fallback) -->
+  <!-- HTML5 QR / Barcode Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Kanit:wght@300;400;500;600;700&display=swap');
@@ -195,7 +195,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -247,7 +247,7 @@
           </div>
         </div>
 
-        <!-- การ์ดยอดสรุปหลัก 3 ช่อง (แสดงยอดเงินชัดเจน และใช้คำว่า "หน่วย" ทั้งหมด) -->
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง -->
         <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
             <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
@@ -468,20 +468,54 @@
     </div>
   </div>
 
-  <!-- Modal กล้องสแกนบาร์โค้ด Fallback -->
-  <div id="scannerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-4 text-center border border-slate-200">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="font-bold text-slate-800 text-sm">📷 เล็งกล้องไปที่บาร์โค้ดสินค้า</h3>
-        <button onclick="toggleScannerModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold px-2">&times;</button>
+  <!-- 📷 หน้าต่างสแกนเนอร์มาตรฐานสากล (Scan & Acknowledge Modal) -->
+  <div id="scannerModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex flex-col items-center justify-between p-3 sm:p-5 hidden">
+    <!-- ส่วนหัว -->
+    <div class="w-full max-w-md flex justify-between items-center text-white pb-2 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <span class="text-base">📷</span>
+        <span class="text-xs sm:text-sm font-bold">เล็งบาร์โค้ดสินค้าในกรอบ</span>
       </div>
-      <div id="reader" class="overflow-hidden rounded-2xl border border-slate-200 w-full mb-3 bg-slate-100"></div>
-      <div id="scanResultBadge" class="text-xs font-bold text-orange-600 bg-orange-50 py-1.5 px-3 rounded-lg border border-orange-200 mb-3 hidden">
-        สแกนสำเร็จ: <span id="scannedCodeText"></span> (+1)
+      <button onclick="toggleScannerModal()" class="text-white/70 hover:text-white text-2xl font-bold px-2">&times;</button>
+    </div>
+
+    <!-- กรอบกล้องขนาดกะทัดรัด (Compact Viewfinder) ไม่บังหน้าจอ -->
+    <div class="w-full max-w-md my-auto flex flex-col items-center">
+      <div id="reader" class="overflow-hidden rounded-2xl border-2 border-orange-500 w-full max-h-52 bg-black shadow-lg"></div>
+      
+      <!-- การ์ดยืนยันยอดสินค้าที่สแกนได้ล่าสุด (Scan Result Card) -->
+      <div id="scannedFeedbackCard" class="w-full bg-white rounded-2xl p-3.5 mt-3 shadow-2xl border border-slate-200 transition-all transform duration-150">
+        <div class="flex justify-between items-start mb-2">
+          <div class="flex-1 mr-2 truncate">
+            <span id="scanCardCode" class="text-xs font-black text-orange-600 mono-num block truncate">รหัสสินค้า</span>
+            <span id="scanCardName" class="text-xs font-bold text-slate-800 block truncate">ชื่อสินค้า</span>
+          </div>
+          <span id="scanCardUom" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200 uppercase">EA</span>
+        </div>
+
+        <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-700">ยอดที่นับสะสมได้:</span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="adjustScannedItemQty(-1)" class="w-8 h-8 bg-white border border-slate-300 rounded-lg font-black text-base active:bg-slate-100 shadow-xs">-</button>
+            <span id="scanCardQty" class="text-xl font-black text-orange-600 mono-num min-w-[45px] text-center">0</span>
+            <button onclick="adjustScannedItemQty(1)" class="w-8 h-8 bg-white border border-slate-300 rounded-lg font-black text-base active:bg-slate-100 shadow-xs">+</button>
+          </div>
+        </div>
+
+        <div class="mt-3 flex gap-2">
+          <button id="resumeScanBtn" onclick="resumeScanningNext()" class="flex-1 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold py-2 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1">
+            📷 <span>สแกนชิ้นต่อไป (Next)</span>
+          </button>
+          <button onclick="toggleScannerModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition">
+            เสร็จสิ้น
+          </button>
+        </div>
       </div>
-      <button onclick="toggleScannerModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-xl text-xs">
-        ปิดหน้าต่างสแกน
-      </button>
+    </div>
+
+    <!-- ส่วนท้าย -->
+    <div class="w-full max-w-md text-center text-[10px] text-white/50 pt-2">
+      สแกนแล้ว 1 ครั้ง ระบบจะหยุดกล้องเพื่อยืนยันยอดอัตโนมัติ
     </div>
   </div>
 
@@ -705,8 +739,9 @@
     let html5QrCode = null;
     let isScanning = false;
 
-    // ตัวแปรล็อกคุมจังหวะการสแกน ไม่ให้รัวติดกัน
-    let isScanLocked = false;
+    // ระบบล็อกกล้องมาตรฐานสากล (Freeze on scan)
+    let isScanFrozen = false;
+    let lastScannedItemIndex = -1;
 
     let currentCountMode = 'table';
     let currentFocusIndex = 0;
@@ -717,21 +752,16 @@
     const SESSION_DURATION = 12 * 60 * 60 * 1000;
 
     // ==========================================
-    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (อัปเกรดแก้เสียงแตก + ปลดล็อก TTS)
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE
     // ==========================================
     let isAudioUnlocked = false;
     let audioCtx = null;
 
-    // ฟังก์ชันปลดล็อก AudioContext และ Speech บน Mobile/LINE
     function unlockAudioEngine() {
       if (isAudioUnlocked) return;
       try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         if ('speechSynthesis' in window) {
           const silentUtterance = new SpeechSynthesisUtterance('');
           silentUtterance.volume = 0.01;
@@ -743,11 +773,9 @@
       }
     }
 
-    // ปลดล็อกทันทีที่มีการแตะหน้าจอครั้งแรก
     window.addEventListener('touchstart', unlockAudioEngine, { once: true });
     window.addEventListener('click', unlockAudioEngine, { once: true });
 
-    // 1. เสียงตี๊ดยาว 1 ครั้ง (มี Fade Out นุ่มนวล ไม่แตกซ่า)
     function playSuccessBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -771,7 +799,6 @@
       } catch(e) {}
     }
 
-    // 2. เสียงตี๊ดยาวต่ำ 2 ครั้ง (ไม่พบใน Item Master)
     function playErrorBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -779,7 +806,6 @@
 
         const now = audioCtx.currentTime;
         
-        // ครั้งที่ 1
         const osc1 = audioCtx.createOscillator();
         const gain1 = audioCtx.createGain();
         osc1.connect(gain1);
@@ -792,7 +818,6 @@
         osc1.start(now);
         osc1.stop(now + 0.27);
 
-        // ครั้งที่ 2
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.connect(gain2);
@@ -807,7 +832,6 @@
       } catch(e) {}
     }
 
-    // 3. ฟังก์ชันขานเสียงภาษาไทย
     function speakText(text) {
       try {
         if (!('speechSynthesis' in window)) return;
@@ -1049,7 +1073,6 @@
       }
     }
 
-    // 1. ระบบจำค่าร่างอัตโนมัติ (Local Draft Auto-save & Restore)
     function autoSaveDraft() {
       const loc = document.getElementById("locSelect").value;
       if (!loc || currentItems.length === 0 || isEditMode) return;
@@ -1117,7 +1140,6 @@
       document.getElementById("draftAlert").classList.add("hidden");
     }
 
-    // 2. ดึงพิกัด GPS หน้างาน
     function getDeviceCoordinates() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
@@ -1134,7 +1156,6 @@
       });
     }
 
-    // 3. ควบคุม Overlay ป้องกันการกดซ้ำ
     function showLoading(msg) {
       document.getElementById("loadingText").innerText = msg || "กำลังประมวลผล...";
       document.getElementById("loadingOverlay").classList.remove("hidden");
@@ -1658,7 +1679,6 @@
       }
     }
 
-    // คำนวณสรุปยอดเงินและรวมหน่วยเต็ม (Units)
     function recalcSummary() {
       let totalSysVal = 0;
       let totalActVal = 0;
@@ -1703,11 +1723,9 @@
         }
       });
 
-      // ยอดเงิน
       document.getElementById("sumSysVal").innerText = totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
       document.getElementById("sumActVal").innerText = totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
 
-      // แสดงเป็นหน่วยเต็ม
       const sysQtyEl = document.getElementById("sumSysQty");
       if (sysQtyEl) {
         sysQtyEl.innerText = `รวม: ${totalSysUnits.toLocaleString()} หน่วย`;
@@ -1849,30 +1867,35 @@
       }
     }
 
-    // 4. สแกนได้ทั้ง Item Code และ Barcode สากล พร้อมระบบหน่วงจังหวะ
+    // ==========================================
+    // 📷 SCAN & ACKNOWLEDGE ENGINE (มาตรฐานสากล)
+    // ==========================================
     function processBarcodeCount(barcode) {
-      if (isScanLocked) return;
-      isScanLocked = true;
+      if (isScanFrozen) return; // หากล็อกไว้ ไม่ประมวลผลซ้ำเด็ดขาด
 
       const cleanCode = barcode.trim().toUpperCase();
 
       // ค้นหาในรายการที่กำลังตรวจนับ
-      const idx = currentItems.findIndex(i => 
+      let idx = currentItems.findIndex(i => 
         i.itemCode.toUpperCase() === cleanCode || (i.barcode && i.barcode.toUpperCase() === cleanCode)
       );
 
       if (idx !== -1) {
+        // ล็อกกล้องทันทีที่เจอ
+        freezeScanner();
         playSuccessBeep();
         adjustBox(idx, 1);
         highlightRow(currentItems[idx].itemCode);
 
+        lastScannedItemIndex = idx;
         const currentCount = currentItems[idx].actBox || 0;
+        
+        // ขานตัวเลขทันที
         speakText(currentCount);
-
+        
+        // แสดงการ์ดข้อมูลสินค้าในหน้าต่างกล้อง
+        updateFeedbackCard(currentItems[idx]);
         autoSaveDraft();
-
-        // หน่วงเวลา 1.5 วินาทีเพื่อเปิดทางให้เสียงอ่านตัวเลขทำงานจนจบ
-        setTimeout(() => { isScanLocked = false; }, 1500);
         return;
       }
 
@@ -1895,14 +1918,16 @@
 
       // ถ้าไม่มีใน Item Master เลย
       if (!foundInMaster) {
+        freezeScanner();
         playErrorBeep();
         speakText("ไม่พบสินค้า");
         alert(`❌ ไม่พบข้อมูลในระบบ (Item Master)\n\nรหัส/บาร์โค้ด: "${cleanCode}"\nกรุณาตรวจเช็คกล่องสินค้า หรือแจ้งฝ่ายสต๊อกเพื่อเพิ่มสินค้าเข้าระบบ`);
-        setTimeout(() => { isScanLocked = false; }, 1500);
+        resumeScanningNext(); // คืนสถานะให้ลองสแกนใหม่
         return;
       }
 
       // พบใน Master ดึงมาสร้างเป็นสินค้าเกิน
+      freezeScanner();
       playSuccessBeep();
       currentItems.push({
         itemCode: masterItemCode,
@@ -1926,9 +1951,45 @@
       populateGroupFilter();
       renderTable();
       highlightRow(masterItemCode);
-      autoSaveDraft();
 
-      setTimeout(() => { isScanLocked = false; }, 1500);
+      lastScannedItemIndex = currentItems.findIndex(i => i.itemCode === masterItemCode);
+      updateFeedbackCard(currentItems[lastScannedItemIndex]);
+      autoSaveDraft();
+    }
+
+    // ล็อกกล้องและแสดงการ์ดยืนยันยอด
+    function freezeScanner() {
+      isScanFrozen = true;
+      if (html5QrCode && html5QrCode.pause) {
+        try { html5QrCode.pause(); } catch(e){}
+      }
+    }
+
+    // ปลดล็อกให้สแกนชิ้นต่อไป
+    function resumeScanningNext() {
+      isScanFrozen = false;
+      if (html5QrCode && html5QrCode.resume) {
+        try { html5QrCode.resume(); } catch(e){}
+      }
+      document.getElementById("resumeScanBtn").classList.add("animate-pulse");
+      setTimeout(() => document.getElementById("resumeScanBtn").classList.remove("animate-pulse"), 400);
+    }
+
+    // อัปเดตข้อมูลการ์ดในกล้อง
+    function updateFeedbackCard(item) {
+      document.getElementById("scanCardCode").innerText = item.itemCode;
+      document.getElementById("scanCardName").innerText = item.itemName;
+      document.getElementById("scanCardUom").innerText = item.uom || 'EA';
+      document.getElementById("scanCardQty").innerText = item.actBox || 0;
+    }
+
+    // ปุ่มบวกลบตรงการ์ดยืนยันยอดในกล้อง
+    function adjustScannedItemQty(delta) {
+      if (lastScannedItemIndex === -1 || !currentItems[lastScannedItemIndex]) return;
+      adjustBox(lastScannedItemIndex, delta);
+      const newQty = currentItems[lastScannedItemIndex].actBox || 0;
+      document.getElementById("scanCardQty").innerText = newQty;
+      speakText(newQty);
     }
 
     function addExtraItem() {
@@ -1950,6 +2011,7 @@
     }
 
     async function toggleScannerModal() {
+      // หากอยู่ใน LINE App และรองรับ liff.scanCodeV2
       if (typeof liff !== "undefined" && liff.isLoggedIn && liff.isInClient && liff.isInClient()) {
         if (liff.scanCodeV2) {
           try {
@@ -1959,14 +2021,16 @@
             }
             return;
           } catch (err) {
-            console.warn("LIFF ScanCode error:", err);
+            console.warn("LIFF ScanCode error, falling back to camera modal:", err);
           }
         }
       }
 
+      // Fallback: ใช้หน้าต่างกล้องของระบบ
       const modal = document.getElementById("scannerModal");
       if (modal.classList.contains("hidden")) {
         modal.classList.remove("hidden");
+        isScanFrozen = false;
         startScanner();
       } else {
         modal.classList.add("hidden");
@@ -1979,15 +2043,20 @@
       html5QrCode = new Html5Qrcode("reader");
       isScanning = true;
 
-      const config = { fps: 10, qrbox: { width: 250, height: 180 } };
+      // ปรับขนาด Viewfinder ให้พอดี ไม่ใหญ่เกินไป
+      const config = { 
+        fps: 15, 
+        qrbox: { width: 220, height: 140 } 
+      };
+      
       html5QrCode.start(
         { facingMode: "environment" },
         config,
         (decodedText) => {
-          const barcode = decodedText.trim().toUpperCase();
-          document.getElementById("scannedCodeText").innerText = barcode;
-          document.getElementById("scanResultBadge").classList.remove("hidden");
-          processBarcodeCount(barcode);
+          if (!isScanFrozen) {
+            const barcode = decodedText.trim().toUpperCase();
+            processBarcodeCount(barcode);
+          }
         },
         () => {}
       ).catch((err) => {
@@ -2000,9 +2069,10 @@
       if (html5QrCode && isScanning) {
         html5QrCode.stop().then(() => {
           isScanning = false;
-          document.getElementById("scanResultBadge").classList.add("hidden");
+          isScanFrozen = false;
         }).catch(() => {
           isScanning = false;
+          isScanFrozen = false;
         });
       }
     }
@@ -2071,7 +2141,6 @@
       }
     }
 
-    // ฟังก์ชันบันทึกสต๊อก พร้อมพิกัด GPS และล็อคปุ่มป้องกันกดซ้ำ
     async function submitData(onlyCurrentGroup) {
       const location = document.getElementById("locSelect").value;
       const auditor = document.getElementById("auditorInput").value.trim();

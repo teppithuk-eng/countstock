@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ระบบตรวจนับสต๊อก - Winsome Green Co., Ltd.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- HTML5 QR / Barcode Scanner (Fallback กรณีเปิดนอก LINE) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Kanit:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Kanit', sans-serif; }
+    .mono-num { font-family: 'Chakra Petch', monospace; }
+
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    .group-row-print {
+      background-color: #ffedd5 !important;
+      color: #9a3412 !important;
+      font-weight: bold !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .group-subtotal-print {
+      background-color: #f1f5f9 !important;
+      color: #0f172a !important;
+      font-weight: bold !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    @media print {
+      body { 
+        background-color: white !important; 
+        color: black !important; 
+        padding: 0 !important; 
+        margin: 0 !important; 
+      }
+      .no-print { display: none !important; }
+      
+      #printReportView, #printBlankSheetView { 
+        width: 100% !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        border: none !important; 
+        box-shadow: none !important; 
+        color: black !important; 
+        background: white !important; 
+      }
+      
+      .print-table { 
+        width: 100% !important; 
+        border-collapse: collapse !important; 
+      }
+      
+      .print-table th, .print-table td { 
+        border: 1px solid #94a3b8 !important; 
+        color: black !important; 
+      }
+
+      thead { display: table-header-group !important; }
+      tfoot { display: table-footer-group !important; }
+      tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+      .sign-section { break-inside: avoid !important; page-break-inside: avoid !important; }
+
+      @page { 
+        size: A4 landscape; 
+        margin: 6mm 6mm 6mm 6mm; 
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100/80 min-h-screen text-slate-800 p-1.5 sm:p-4 md:p-6 flex flex-col justify-center items-center select-none">
+
+  <!-- 1. กล่อง Login -->
+  <div id="loginBox" class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl shadow-xl p-8 text-center no-print relative overflow-hidden hidden">
+    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600"></div>
+    <div class="mb-4">
+      <div class="text-2xl font-black tracking-wider text-slate-900 uppercase">Winsome Green</div>
+      <div class="text-xs font-bold text-orange-600 tracking-widest uppercase">Co., Ltd.</div>
+    </div>
+    <h2 class="text-base font-bold tracking-tight text-slate-700 uppercase">ระบบตรวจนับสต๊อกสินค้า</h2>
+    <p class="text-xs text-slate-400 mb-6">Van Sales & Branch Warehouse Audit</p>
+
+    <div class="mb-5 text-left">
+      <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">รหัสผ่านระบบ (Access Key)</label>
+      <input type="password" id="passInput" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-300 focus:border-orange-500 focus:bg-white rounded-xl px-4 py-3 text-center tracking-widest text-slate-800 font-bold focus:outline-none transition shadow-sm" onkeypress="if(event.key==='Enter') verifyPass()">
+      <div id="passError" class="text-rose-600 text-xs font-medium mt-2 hidden text-center">รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</div>
+    </div>
+
+    <button onclick="verifyPass()" id="loginBtn" class="w-full bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold py-3 rounded-xl uppercase tracking-wider shadow-md shadow-orange-500/20 transition duration-150">
+      เข้าสู่ระบบ
+    </button>
+
+    <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1 text-[11px] text-slate-400">
+      <span>Developed by</span>
+      <span class="font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">[PromptOps] Thep</span>
+    </div>
+  </div>
+
+  <!-- 2. Main App Console -->
+  <div id="mainApp" class="w-full max-w-6xl bg-white border border-slate-200 rounded-3xl shadow-xl p-3 sm:p-6 hidden no-print relative">
+    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 rounded-t-3xl"></div>
+
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base sm:text-xl font-black tracking-tight text-slate-900 leading-tight">Winsome Green Co., Ltd.</h1>
+          <span class="hidden sm:inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-orange-200">[PromptOps] Thep</span>
+        </div>
+        <p class="text-[11px] sm:text-xs text-orange-600 font-semibold">ระบบตรวจนับสต๊อกสินค้า (Van Sales / Warehouse - Fast Audit)</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="lineUserBadge" class="hidden text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded-lg border border-emerald-200"></span>
+        <button onclick="logout()" class="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl transition">
+          ออกจากระบบ
+        </button>
+      </div>
+    </div>
+
+    <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
+    <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
+        <span class="text-base">✏️</span>
+        <span>โหมดแก้ไขย้อนหลัง: รอบ <span id="editModeDateText" class="text-sky-950 font-black underline"></span> คลัง <span id="editModeLocText" class="text-sky-950 font-black underline"></span></span>
+      </div>
+      <button onclick="cancelEditMode()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
+        ✕ ยกเลิก
+      </button>
+    </div>
+
+    <!-- เมนูสลับแท็บหลัก -->
+    <div class="flex border-b border-slate-200 mb-3 text-xs sm:text-sm font-bold">
+      <button id="tabCountBtn" onclick="switchTab('count')" class="flex-1 py-2 text-center border-b-2 border-orange-600 text-orange-600 transition">
+        📦 ตรวจนับสต๊อก (Active)
+      </button>
+      <button id="tabPrintBtn" onclick="switchTab('print')" class="flex-1 py-2 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+        🖨️ ประวัติและพิมพ์รายงาน (History)
+      </button>
+    </div>
+
+    <!-- TAB 1: ตรวจนับใหม่ -->
+    <div id="tabCountContent">
+      <div class="space-y-2.5 mb-3 bg-slate-50 border border-slate-200/80 p-3 rounded-2xl">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ทะเบียนรถ / คลังสาขา (Target Location)</label>
+            <select id="locSelect" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 font-medium text-xs sm:text-sm focus:outline-none shadow-sm">
+              <option value="">-- กำลังโหลดข้อมูลคลัง/รถ... --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อเจ้าหน้าที่ผู้นับสต๊อก (Auditor)</label>
+            <input type="text" id="auditorInput" placeholder="ระบุชื่อผู้นับสต๊อก" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 text-xs sm:text-sm focus:outline-none shadow-sm">
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button onclick="fetchStock()" class="flex-1 bg-orange-600 hover:bg-orange-700 active:scale-[0.99] text-white font-bold py-2 rounded-xl shadow-sm text-xs sm:text-sm uppercase tracking-wider transition">
+            🔄 โหลดสต๊อกคงเหลือตามระบบ
+          </button>
+          <button onclick="openBlankSheetModal()" class="bg-slate-800 hover:bg-slate-900 active:scale-[0.99] text-white font-bold py-2 px-3 rounded-xl shadow-sm text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5">
+            📝 <span>พิมพ์ใบตรวจนับเปล่า</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="tableContainer" class="hidden">
+        <!-- แถบสวิตช์เลือกโหมดตรวจนับ -->
+        <div class="bg-slate-100 p-1 rounded-2xl mb-2.5 flex items-center border border-slate-200">
+          <button id="modeTableBtn" onclick="switchCountMode('table')" class="flex-1 py-1.5 rounded-xl font-bold text-xs transition bg-white text-orange-600 shadow-sm">
+            📋 โหมดตารางเดิม (Table View)
+          </button>
+          <button id="modeFocusBtn" onclick="switchCountMode('focus')" class="flex-1 py-1.5 rounded-xl font-bold text-xs transition text-slate-600 hover:text-slate-900">
+            📱 โหมดตรวจนับด่วนมือถือ (Focus View)
+          </button>
+        </div>
+
+        <!-- แถบเครื่องมือสแกนบาร์โค้ด & ปุ่มลัดนับยอดตรงกัน -->
+        <div class="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent border border-orange-200 p-2.5 rounded-2xl mb-2.5 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button onclick="toggleScannerModal()" class="bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-sm transition">
+              📷 <span>เปิดกล้องสแกน (+1)</span>
+            </button>
+            <button onclick="fillMatchAllVisible()" title="ดึงยอดระบบใส่เป็นยอดนับจริงสำหรับรายการที่ยังไม่ได้นับ" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-sm transition">
+              ⚡ <span>ดึงยอดตรงทุกตัวที่แสดง</span>
+            </button>
+            <span id="scanStatusMsg" class="text-xs font-semibold text-orange-700 hidden"></span>
+          </div>
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <input type="text" id="barcodeGunInput" placeholder="⚡ ยิงบาร์โค้ด (+1)" class="w-full sm:w-48 bg-white border border-slate-300 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-mono focus:border-orange-500 focus:outline-none" onkeypress="handleGunScan(event)">
+          </div>
+        </div>
+
+        <!-- การ์ดยอดสรุปหลัก 3 ช่อง -->
+        <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
+            <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
+            <div id="sumSysVal" class="text-xs sm:text-base font-bold text-slate-800 mono-num mt-0.5 truncate">0.00 ฿</div>
+          </div>
+          <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 text-left">
+            <div class="text-[9px] sm:text-[10px] font-bold text-orange-700 uppercase truncate">นับได้จริง</div>
+            <div id="sumActVal" class="text-xs sm:text-base font-bold text-orange-600 mono-num mt-0.5 truncate">0.00 ฿</div>
+          </div>
+          <div id="diffCard" class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-left">
+            <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">ผลต่าง (Diff)</div>
+            <div id="sumDiffVal" class="text-xs sm:text-base font-bold text-slate-700 mono-num mt-0.5 truncate">0.00 ฿</div>
+          </div>
+        </div>
+
+        <!-- การ์ดสรุปผลต่างรายกลุ่ม: พับเก็บได้ -->
+        <div class="bg-white border border-slate-200 rounded-2xl mb-2.5 shadow-sm overflow-hidden">
+          <div onclick="toggleCategoryAccordion()" class="bg-slate-50/80 p-2 sm:p-2.5 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition">
+            <div class="text-[11px] sm:text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <span>📊 สรุปผลต่างรายกลุ่ม (ยอดเงิน & ชิ้นสลับ)</span>
+              <span id="catSummaryBadge" class="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold">พับอยู่</span>
+            </div>
+            <span id="accordionArrow" class="text-xs text-slate-500 font-bold transition-transform transform">▼</span>
+          </div>
+          <div id="categorySummaryContent" class="hidden p-2.5 border-t border-slate-100 max-h-48 overflow-y-auto">
+            <div id="categorySummaryList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- แถบกรองกลุ่มสินค้า, สถานะการนับ และค้นหาด่วน -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 mb-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-sm">
+          <div class="flex items-center gap-1.5 w-full sm:w-auto flex-1 flex-wrap">
+            <span class="text-xs font-bold text-slate-600 whitespace-nowrap">🏷️ กลุ่ม:</span>
+            <select id="groupFilterSelect" onchange="applyFilters()" class="w-full sm:w-44 bg-white border border-slate-300 focus:border-orange-500 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none shadow-sm">
+              <option value="ALL">-- สินค้าทุกกลุ่ม (ทั้งหมด) --</option>
+            </select>
+
+            <span class="text-xs font-bold text-slate-600 whitespace-nowrap sm:ml-1">📌 สถานะ:</span>
+            <select id="statusFilterSelect" onchange="applyFilters()" class="w-full sm:w-40 bg-white border border-slate-300 focus:border-orange-500 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none shadow-sm">
+              <option value="ALL">-- แสดงทั้งหมด --</option>
+              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠️ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
+              <option value="COUNTED" class="text-emerald-600 font-bold">✓ เช็คแล้ว (นับแล้ว)</option>
+            </select>
+
+            <button onclick="filterUncountedOnly()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-2.5 py-1 rounded-xl text-xs font-bold transition active:scale-95 whitespace-nowrap">
+              🚨 ดูที่ยังไม่เช็ค (<span id="uncountedCountBadge">0</span>)
+            </button>
+          </div>
+
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <div class="relative w-full sm:w-48">
+              <input type="text" id="searchInput" oninput="applyFilters()" placeholder="🔍 ค้นหาสินค้า..." class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl pl-2.5 pr-7 py-1 text-xs text-slate-800 focus:outline-none shadow-sm">
+              <button onclick="clearSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold">&times;</button>
+            </div>
+            <span id="rowCountBadge" class="text-[10px] sm:text-[11px] font-bold bg-orange-100 text-orange-800 px-2 py-1 rounded-lg border border-orange-200 whitespace-nowrap">
+              0 รายการ
+            </span>
+          </div>
+        </div>
+
+        <!-- VIEW A: โหมดตารางเดิม (Table View) -->
+        <div id="countTableView" class="overflow-x-auto border border-slate-200 rounded-2xl mb-2.5 max-h-[50vh] sm:max-h-[55vh] overflow-y-auto bg-white shadow-sm">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="sticky top-0 bg-slate-100/95 backdrop-blur-sm border-b border-slate-200 text-slate-600 font-bold z-10">
+              <tr>
+                <th class="p-2">สินค้า</th>
+                <th class="p-1.5 text-right">ราคา</th>
+                <th class="p-1.5 text-center whitespace-nowrap">ระบบ</th>
+                <th class="p-1.5 text-center min-w-[190px] whitespace-nowrap">นับจริง (คีย์ / ลัด)</th>
+                <th class="p-1.5 text-center min-w-[70px] whitespace-nowrap">ต่าง</th>
+                <th class="p-1.5 text-right min-w-[75px] whitespace-nowrap">มูลค่าต่าง</th>
+                <th class="p-1.5">หมายเหตุ</th>
+                <th class="p-1.5 text-center w-12">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <!-- VIEW B: โหมดตรวจนับด่วนมือถือ (Mobile Focus Mode) -->
+        <div id="countFocusView" class="hidden mb-2.5">
+          <div class="bg-white border-2 border-orange-500 rounded-3xl p-4 shadow-lg text-center relative overflow-hidden">
+            <div class="flex justify-between items-center mb-2">
+              <span id="focusIndexBadge" class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">รายการ 1/1</span>
+              <span id="focusGroupBadge" class="text-[11px] font-bold text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-0.5 rounded-full truncate max-w-[180px]">กลุ่ม</span>
+            </div>
+
+            <div class="mb-3">
+              <div id="focusItemCode" class="text-base font-black text-slate-900 tracking-wider">3101XX</div>
+              <div id="focusItemName" class="text-xs text-slate-600 font-medium">ชื่อสินค้า</div>
+              <div id="focusItemPrice" class="text-[11px] text-slate-400 mt-0.5">ราคา 0.00 ฿ / หน่วย</div>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 flex justify-around items-center">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase">ยอดระบบ (กล่อง)</div>
+                <div id="focusSysBox" class="text-base font-black text-slate-800 mono-num">0</div>
+              </div>
+              <div id="focusSysPcsBox">
+                <div class="text-[10px] text-slate-400 font-bold uppercase">ยอดระบบ (เศษ)</div>
+                <div id="focusSysPcs" class="text-base font-black text-amber-700 mono-num">0</div>
+              </div>
+            </div>
+
+            <div class="bg-orange-50/50 border border-orange-200 rounded-2xl p-3 mb-3">
+              <div class="text-xs font-bold text-orange-800 mb-2">ป้อนยอดนับจริง (หน้างาน):</div>
+              <div class="flex items-center justify-center gap-3">
+                <div class="flex flex-col items-center">
+                  <span class="text-[10px] font-bold text-slate-600 mb-1" id="focusLabelBox">กล่อง</span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="adjustFocusBox(-1)" class="w-9 h-9 bg-white border border-slate-300 active:bg-slate-200 rounded-xl font-black text-lg shadow-sm">-</button>
+                    <input type="number" id="focusInputBox" min="0" max="9999" oninput="updateFocusInput(this.value, null)" class="w-16 h-10 text-center font-bold text-lg text-orange-600 border border-slate-300 rounded-xl shadow-inner focus:outline-none mono-num">
+                    <button onclick="adjustFocusBox(1)" class="w-9 h-9 bg-white border border-slate-300 active:bg-slate-200 rounded-xl font-black text-lg shadow-sm">+</button>
+                  </div>
+                </div>
+
+                <div id="focusPcsContainer" class="flex flex-col items-center">
+                  <span class="text-[10px] font-bold text-slate-600 mb-1" id="focusLabelPcs">เศษ</span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="adjustFocusPcs(-1)" class="w-9 h-9 bg-white border border-slate-300 active:bg-slate-200 rounded-xl font-black text-lg shadow-sm">-</button>
+                    <input type="number" id="focusInputPcs" min="0" oninput="updateFocusInput(null, this.value)" class="w-14 h-10 text-center font-bold text-lg text-amber-600 border border-slate-300 rounded-xl shadow-inner focus:outline-none mono-num">
+                    <button onclick="adjustFocusPcs(1)" class="w-9 h-9 bg-white border border-slate-300 active:bg-slate-200 rounded-xl font-black text-lg shadow-sm">+</button>
+                  </div>
+                </div>
+              </div>
+
+              <button onclick="matchFocusCurrent()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow-sm transition">
+                ✓ <span>ยอดตรงกับระบบ (Match & Next)</span>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 mb-3 px-1 text-xs">
+              <div class="text-left">
+                <span class="text-slate-400 font-bold block text-[10px]">ผลต่างรายการนี้:</span>
+                <span id="focusDiffText" class="font-bold mono-num text-slate-700">-</span>
+              </div>
+              <div class="text-right flex-1 max-w-[170px]">
+                <span class="text-slate-400 font-bold block text-[10px]">หมายเหตุ:</span>
+                <select id="focusRemarkSelect" onchange="updateFocusRemark(this.value)" class="w-full bg-white border border-slate-300 rounded-lg p-1 text-[11px] focus:outline-none">
+                  <option value="">-</option>
+                  <option value="ไม่มีเลขในระบบ">ไม่มีเลขในระบบ</option>
+                  <option value="สลับสี">สลับสี</option>
+                  <option value="ของจริงเสีย">ของจริงเสีย</option>
+                  <option value="อื่นๆ">อื่นๆ</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="prevFocusItem()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">
+                ⬅️ ก่อนหน้า
+              </button>
+              <button onclick="nextFocusItem()" class="bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition">
+                ถัดไป ➡️
+              </button>
+            </div>
+
+            <div id="focusDeleteContainer" class="mt-3 hidden">
+              <button onclick="deleteFocusCurrentItem()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold py-2 rounded-xl text-xs transition active:scale-95 flex items-center justify-center gap-1">
+                🗑️ <span>ลบรายการนี้ออกจากการตรวจนับ</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3 p-2.5 border border-dashed border-amber-300 bg-amber-50/60 rounded-2xl flex flex-col sm:flex-row gap-2 items-center">
+          <div class="text-xs font-bold text-amber-900 uppercase whitespace-nowrap">➕ สินค้าเกินนอกระบบ:</div>
+          <input type="text" id="addItemCode" placeholder="ระบุ Item Code" class="w-full sm:w-2/3 bg-white border border-amber-300 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-mono uppercase focus:border-orange-500 focus:outline-none">
+          <button onclick="addExtraItem()" class="w-full sm:w-1/3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold py-1.5 rounded-xl text-xs uppercase shadow-sm transition">
+            เพิ่มเข้ารายการ
+          </button>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button id="saveBtn" onclick="submitData(false)" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99] text-white font-bold py-3 rounded-2xl text-sm sm:text-base uppercase tracking-wider shadow-md transition">
+            💾 บันทึกผลการตรวจนับทั้งหมด
+          </button>
+          <button id="saveGroupBtn" onclick="submitData(true)" class="bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold py-3 px-3.5 rounded-2xl text-xs sm:text-sm uppercase tracking-wider shadow-md transition">
+            🏷️ บันทึกเฉพาะกลุ่มที่เลือก
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ค้นหาและพิมพ์ย้อนหลัง -->
+    <div id="tabPrintContent" class="hidden">
+      <div class="space-y-3 bg-slate-50 border border-slate-200 p-3 sm:p-4 rounded-2xl text-xs sm:text-sm mb-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">เลือกทะเบียนรถ / คลังสาขาที่มีประวัติบันทึกแล้ว</label>
+          <select id="histLocSelect" onchange="loadHistoryDates()" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 text-xs sm:text-sm focus:outline-none">
+            <option value="">-- กำลังโหลดรายการที่มีประวัติ... --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">เลือกรอบวัน-เวลาที่ตรวจนับ (Audit Timestamp)</label>
+          <select id="histDateSelect" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 text-xs sm:text-sm focus:outline-none">
+            <option value="">-- กรุณาเลือกทะเบียนรถ/คลังก่อน --</option>
+          </select>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          <button onclick="fetchHistoryReport()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-[0.99] text-white font-bold py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-1.5">
+            🔍 <span>เรียกดูรายงานเพื่อสั่งพิมพ์</span>
+          </button>
+          <button onclick="loadHistoryToEdit()" class="w-full bg-sky-600 hover:bg-sky-700 active:scale-[0.99] text-white font-bold py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-1.5">
+            ✏️ <span>ดึงรายการกลับไปแก้ไข (Edit)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-[10px] sm:text-[11px] text-slate-400 gap-1">
+      <div>ระบบบริหารจัดการและตรวจนับสต๊อก © Winsome Green Co., Ltd.</div>
+      <div class="font-medium">Designed & Built by <span class="text-orange-600 font-bold">[PromptOps] Thep</span></div>
+    </div>
+  </div>
+
+  <!-- Modal กล้องสแกนบาร์โค้ด Fallback -->
+  <div id="scannerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-4 text-center border border-slate-200">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-slate-800 text-sm">📷 เล็งกล้องไปที่บาร์โค้ดสินค้า</h3>
+        <button onclick="toggleScannerModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold px-2">&times;</button>
+      </div>
+      <div id="reader" class="overflow-hidden rounded-2xl border border-slate-200 w-full mb-3 bg-slate-100"></div>
+      <div id="scanResultBadge" class="text-xs font-bold text-orange-600 bg-orange-50 py-1.5 px-3 rounded-lg border border-orange-200 mb-3 hidden">
+        สแกนสำเร็จ: <span id="scannedCodeText"></span> (+1)
+      </div>
+      <button onclick="toggleScannerModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-xl text-xs">
+        ปิดหน้าต่างสแกน
+      </button>
+    </div>
+  </div>
+
+  <!-- Custom Alert Modal -->
+  <div id="customAlertModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 text-left border border-slate-200 transform transition-all">
+      <div class="flex items-center gap-2.5 mb-2.5">
+        <div class="w-9 h-9 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-lg">⚠️</div>
+        <div>
+          <h3 id="customAlertTitle" class="font-bold text-slate-900 text-sm sm:text-base">แจ้งเตือนสินค้ายังไม่ได้ลงยอดนับ</h3>
+          <p class="text-[11px] text-slate-500">กรุณาตรวจสอบและกรอกยอดนับจริงให้ครบถ้วน</p>
+        </div>
+      </div>
+
+      <p id="customAlertSubtitle" class="text-xs text-slate-600 mb-2 font-medium"></p>
+      <div id="customAlertList" class="max-h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-2xl p-2.5 mb-3 space-y-1 text-xs text-slate-700 divide-y divide-slate-200/60"></div>
+
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-2 mb-3 text-[11px] text-amber-900">
+        💡 หากสินค้าไม่มีอยู่จริงบนรถ ให้กรอกเลข <strong>"0"</strong> ในช่องนับจริง
+      </div>
+
+      <button onclick="closeCustomAlert()" class="w-full bg-orange-600 hover:bg-orange-700 active:scale-[0.99] text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm uppercase tracking-wider shadow-md transition">
+        รับทราบและกลับไปกรอกยอด
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Detail Modal -->
+  <div id="errorDetailModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 text-left border border-rose-200">
+      <div class="flex items-center gap-2.5 mb-2.5">
+        <div class="w-9 h-9 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-lg">❌</div>
+        <div>
+          <h3 class="font-bold text-rose-900 text-base">บันทึกข้อมูลไม่สำเร็จ</h3>
+          <p class="text-xs text-rose-500">พบข้อผิดพลาดจากระบบ</p>
+        </div>
+      </div>
+      <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 mb-3 text-xs font-mono text-rose-800 break-words whitespace-pre-wrap max-h-40 overflow-y-auto" id="errorDetailText"></div>
+      <button onclick="document.getElementById('errorDetailModal').classList.add('hidden')" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl text-xs sm:text-sm transition">
+        ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. หน้าพิมพ์รายงาน A4 แนวนอน (Landscape Report View) -->
+  <div id="printReportView" class="hidden w-full bg-white text-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-300 shadow-xl">
+    <div class="w-full border-b-2 border-orange-500 pb-2 mb-2 flex justify-between items-start">
+      <div>
+        <h1 class="text-lg font-black uppercase text-slate-900 tracking-wider leading-tight">Winsome Green Co., Ltd.</h1>
+        <h2 class="text-sm font-bold text-slate-700 leading-tight">ใบรายงานผลการตรวจนับสต๊อกและสรุปมูลค่า (แยกกล่อง/เศษชิ้น)</h2>
+        <p class="text-[10px] text-orange-600 font-semibold uppercase">Internal Warehouse & Sales Van Audit Report</p>
+      </div>
+      <div class="text-right text-[11px] leading-tight shrink-0">
+        <div><strong>รอบวันที่ตรวจนับ:</strong> <span id="rptDate">-</span></div>
+        <div><strong>วันที่-เวลาที่พิมพ์:</strong> <span id="rptPrintTime" class="font-bold text-slate-800">-</span></div>
+        <div><strong>ทะเบียนรถ/คลัง:</strong> <span id="rptVan" class="font-bold text-orange-600 text-sm">-</span></div>
+      </div>
+    </div>
+
+    <div class="mb-3 border border-slate-300 rounded p-2 bg-slate-50">
+      <div class="text-[10px] font-bold text-slate-800 mb-1 uppercase flex justify-between">
+        <span>📊 สรุปผลต่างจำนวนและมูลค่าสุทธิแยกตามกลุ่มสินค้า (ใช้สรุปยอดออกบิล/ชำระเงิน):</span>
+        <span class="text-[9px] text-slate-500 font-normal">สีแดง (-) = ขาดทุน/ต้องเปิดบิลเก็บเงิน | สีเขียว (+) = สินค้าเกิน | สีเทา/ดำ = ยอดพอดี</span>
+      </div>
+      <div id="rptCategorySummary" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-[9px]"></div>
+    </div>
+
+    <table class="print-table w-full border border-slate-300 text-[10px] mb-3 border-collapse">
+      <thead class="bg-slate-100 font-bold uppercase">
+        <tr class="border-b border-slate-300 text-slate-800">
+          <th class="p-1 border-r border-slate-300 text-center w-6" rowspan="2">#</th>
+          <th class="p-1 border-r border-slate-300 text-left min-w-[200px]" rowspan="2">รหัส / ชื่อสินค้า</th>
+          <th class="p-1 border-r border-slate-300 text-center w-12" rowspan="2">หน่วย</th>
+          <th class="p-1 border-r border-slate-300 text-right w-14" rowspan="2">ราคา</th>
+          <th class="p-1 border-r border-slate-300 text-center" colspan="2">ยอดระบบ</th>
+          <th class="p-1 border-r border-slate-300 text-center" colspan="2">นับได้จริง</th>
+          <th class="p-1 border-r border-slate-300 text-center" colspan="2">ผลต่าง</th>
+          <th class="p-1 border-r border-slate-300 text-right w-16" rowspan="2">มูลค่าระบบ</th>
+          <th class="p-1 border-r border-slate-300 text-right w-16" rowspan="2">มูลค่านับจริง</th>
+          <th class="p-1 border-r border-slate-300 text-right w-16" rowspan="2">มูลค่าต่าง</th>
+          <th class="p-1 text-left w-16" rowspan="2">หมายเหตุ</th>
+        </tr>
+        <tr class="border-b border-slate-300 text-slate-700 bg-slate-50 text-[9px]">
+          <th class="p-0.5 border-r border-slate-300 text-center w-10">กล่อง/EA</th>
+          <th class="p-0.5 border-r border-slate-300 text-center w-10">เศษ</th>
+          <th class="p-0.5 border-r border-slate-300 text-center w-10">กล่อง/EA</th>
+          <th class="p-0.5 border-r border-slate-300 text-center w-10">เศษ</th>
+          <th class="p-0.5 border-r border-slate-300 text-center w-10">กล่อง/EA</th>
+          <th class="p-0.5 border-r border-slate-300 text-center w-10">เศษ</th>
+        </tr>
+      </thead>
+      <tbody id="rptTableBody"></tbody>
+      <tfoot id="rptTableFoot" class="bg-orange-50/50 font-bold border-t-2 border-slate-800"></tfoot>
+    </table>
+
+    <div class="sign-section grid grid-cols-5 gap-2 border-t border-slate-300 pt-4 text-[9px] text-center">
+      <div>
+        <div class="h-8 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ผู้ถูกตรวจสอบ</div>
+        <div class="text-slate-500">(พนักงานประจำรถขาย)</div>
+      </div>
+      <div>
+        <div class="h-8 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ผู้นับสต๊อก</div>
+        <div id="rptSignAuditor" class="text-slate-600 font-medium">(-ชื่อผู้นับ-)</div>
+      </div>
+      <div>
+        <div class="h-8 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ผู้จัดการสาขา</div>
+        <div class="text-slate-500">(ผู้รับรอง)</div>
+      </div>
+      <div>
+        <div class="h-8 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ผู้จัดการฝ่ายขาย</div>
+        <div class="text-slate-500">(ผู้อนุมัติ)</div>
+      </div>
+      <div>
+        <div class="h-8 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ฝ่ายบัญชีสต๊อก</div>
+        <div class="text-slate-500">(ผู้ตรวจสอบ)</div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-2 border-t border-slate-200 flex justify-between text-[8px] text-slate-400">
+      <div>Report Generated via Stock Audit System</div>
+      <div>Powered by [PromptOps] Thep</div>
+    </div>
+
+    <div class="mt-6 text-center space-x-3 no-print">
+      <button onclick="handlePrintReport('rptPrintTime')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs tracking-wider uppercase shadow-md transition">
+        🖨️ สั่งพิมพ์ / บันทึกเป็น PDF
+      </button>
+      <button onclick="backToApp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-5 rounded-xl text-xs border border-slate-200 transition">
+        🔙 ย้อนกลับหน้าหลัก
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. หน้าพิมพ์ใบตรวจนับเปล่า A4 แนวนอน (Blank Physical Count Sheet) -->
+  <div id="printBlankSheetView" class="hidden w-full bg-white text-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-300 shadow-xl">
+    <div class="w-full border-b-2 border-slate-800 pb-2 mb-2 flex justify-between items-start">
+      <div>
+        <h1 class="text-lg font-black uppercase text-slate-900 tracking-wider leading-tight">Winsome Green Co., Ltd.</h1>
+        <h2 class="text-sm font-bold text-slate-700 leading-tight">ใบบันทึกผลการตรวจนับสต๊อกจริง (Physical Count Sheet)</h2>
+        <p class="text-[10px] text-slate-500 font-semibold uppercase">Warehouse & Sales Van On-Site Audit Form</p>
+      </div>
+      <div class="text-right text-[11px] leading-tight shrink-0">
+        <div><strong>วันที่ออกเอกสาร:</strong> <span id="blankSheetDate">-</span></div>
+        <div><strong>วันที่-เวลาพิมพ์:</strong> <span id="blankSheetPrintTime" class="font-bold text-slate-800">-</span></div>
+        <div><strong>ทะเบียนรถ/คลัง:</strong> <span id="blankSheetVan" class="font-bold text-slate-900 text-sm">-</span></div>
+      </div>
+    </div>
+
+    <table class="print-table w-full border border-slate-400 text-[10px] mb-3 border-collapse">
+      <thead class="bg-slate-100 font-bold uppercase">
+        <tr class="border-b border-slate-400 text-slate-800">
+          <th class="p-1 border-r border-slate-400 text-center w-8" rowspan="2">#</th>
+          <th class="p-1 border-r border-slate-400 text-left min-w-[220px]" rowspan="2">รหัส / ชื่อสินค้า</th>
+          <th class="p-1 border-r border-slate-400 text-center w-14" rowspan="2">หน่วย</th>
+          <th class="p-1 border-r border-slate-400 text-center" colspan="2" id="blankSysColHeader">ยอดระบบ (Snapshot)</th>
+          <th class="p-1 border-r border-slate-400 text-center" colspan="2">ยอดตรวจนับจริง (หน้างาน)</th>
+          <th class="p-1 text-left w-32" rowspan="2">สภาพสินค้า / หมายเหตุ</th>
+        </tr>
+        <tr class="border-b border-slate-400 text-slate-700 bg-slate-50 text-[9px]">
+          <th class="p-0.5 border-r border-slate-400 text-center w-14" id="blankSysCol1">กล่อง/EA</th>
+          <th class="p-0.5 border-r border-slate-400 text-center w-14" id="blankSysCol2">เศษ</th>
+          <th class="p-0.5 border-r border-slate-400 text-center w-16 bg-white font-black text-slate-900">กล่อง / EA</th>
+          <th class="p-0.5 border-r border-slate-400 text-center w-16 bg-white font-black text-slate-900">เศษชิ้น</th>
+        </tr>
+      </thead>
+      <tbody id="blankTableBody"></tbody>
+    </table>
+
+    <div class="sign-section grid grid-cols-4 gap-4 border-t border-slate-300 pt-4 text-[9px] text-center">
+      <div>
+        <div class="h-10 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ผู้ตรวจนับ (Auditor)</div>
+        <div class="text-slate-500">(ลงลายมือชื่อตัวบรรจง)</div>
+      </div>
+      <div>
+        <div class="h-10 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">พนักงานประจำรถ / คลัง (Auditee)</div>
+        <div class="text-slate-500">(ผู้ร่วมตรวจสอบสต๊อก)</div>
+      </div>
+      <div>
+        <div class="h-10 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ผู้จัดการสาขา (Manager)</div>
+        <div class="text-slate-500">(พยานรับรองการตรวจนับ)</div>
+      </div>
+      <div>
+        <div class="h-10 border-b border-dashed border-slate-400 mb-1"></div>
+        <div class="font-bold text-slate-900">ฝ่ายบัญชีสต๊อก (Stock Controller)</div>
+        <div class="text-slate-500">(ผู้รับมอบเอกสาร)</div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-2 border-t border-slate-200 flex justify-between text-[8px] text-slate-400">
+      <div>Physical Stock Count Audit Sheet</div>
+      <div>Powered by [PromptOps] Thep</div>
+    </div>
+
+    <div class="mt-6 text-center space-x-3 no-print">
+      <button onclick="handlePrintReport('blankSheetPrintTime')" class="bg-slate-900 hover:bg-black text-white font-bold py-2.5 px-6 rounded-xl text-xs tracking-wider uppercase shadow-md transition">
+        🖨️ สั่งพิมพ์ใบตรวจนับเปล่า
+      </button>
+      <button onclick="backToApp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-5 rounded-xl text-xs border border-slate-200 transition">
+        🔙 ย้อนกลับหน้าหลัก
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ⚙️ CONFIGURATION: ตั้งค่าการเชื่อมต่อ
+    // ==========================================
+    // 1. ใส่ Web App URL ของ Apps Script ที่ลงท้ายด้วย /exec
+    const GAS_API_URL = "YOUR_GAS_EXEC_URL_HERE"; 
+    // 2. ใส่ LIFF ID ที่ได้จาก LINE Developers Console
+    const MY_LIFF_ID = "YOUR_LIFF_ID_HERE";
+
+    let currentItems = [];
+    let itemMasterCache = {};
+    let html5QrCode = null;
+    let isScanning = false;
+
+    let currentCountMode = 'table';
+    let currentFocusIndex = 0;
+
+    let isEditMode = false;
+    let originalAuditDate = "";
+
+    const SESSION_DURATION = 12 * 60 * 60 * 1000;
+
+    // ==========================================
+    // 🚀 BRIDGE API: สื่อสารกับ Google Apps Script
+    // ==========================================
+    async function callGasApi(action, params = {}, method = "GET") {
+      try {
+        if (method === "GET") {
+          const query = new URLSearchParams({ action, ...params }).toString();
+          const res = await fetch(`${GAS_API_URL}?${query}`);
+          return await res.json();
+        } else {
+          const res = await fetch(GAS_API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action, payload: params })
+          });
+          return await res.json();
+        }
+      } catch (err) {
+        throw new Error("ติดต่อ Google Apps Script ไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      await initializeLiff();
+      checkAutoLogin();
+    });
+
+    async function initializeLiff() {
+      if (typeof liff === "undefined" || !MY_LIFF_ID || MY_LIFF_ID === "YOUR_LIFF_ID_HERE") return;
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          const auditorInput = document.getElementById("auditorInput");
+          if (auditorInput && !auditorInput.value) {
+            auditorInput.value = profile.displayName;
+          }
+          const userBadge = document.getElementById("lineUserBadge");
+          if (userBadge) {
+            userBadge.innerText = "🟢 LINE: " + profile.displayName;
+            userBadge.classList.remove("hidden");
+          }
+        }
+      } catch (err) {
+        console.warn("LIFF Init Warning:", err);
+      }
+    }
+
+    function checkAutoLogin() {
+      const authSession = localStorage.getItem("wsg_auth_session");
+      if (authSession) {
+        try {
+          const sessionData = JSON.parse(authSession);
+          const now = new Date().getTime();
+          if (now - sessionData.timestamp < SESSION_DURATION) {
+            unlockApp();
+            return;
+          } else {
+            localStorage.removeItem("wsg_auth_session");
+          }
+        } catch(e) {
+          localStorage.removeItem("wsg_auth_session");
+        }
+      }
+      document.getElementById("loginBox").classList.remove("hidden");
+    }
+
+    async function verifyPass() {
+      const pass = document.getElementById("passInput").value;
+      const btn = document.getElementById("loginBtn");
+      btn.disabled = true;
+
+      try {
+        const data = await callGasApi("checkPassword", { pass });
+        btn.disabled = false;
+        if (data.valid) {
+          localStorage.setItem("wsg_auth_session", JSON.stringify({ isLoggedIn: true, timestamp: new Date().getTime() }));
+          unlockApp();
+        } else {
+          document.getElementById("passError").classList.remove("hidden");
+        }
+      } catch (err) {
+        btn.disabled = false;
+        alert(err.message);
+      }
+    }
+
+    function unlockApp() {
+      document.getElementById("loginBox").classList.add("hidden");
+      document.body.classList.remove("justify-center");
+      document.getElementById("mainApp").classList.remove("hidden");
+      initCountTab();
+    }
+
+    function logout() {
+      localStorage.removeItem("wsg_auth_session");
+      document.getElementById("passInput").value = "";
+      document.getElementById("mainApp").classList.add("hidden");
+      document.body.classList.add("justify-center");
+      document.getElementById("loginBox").classList.remove("hidden");
+      document.getElementById("tableContainer").classList.add("hidden");
+      stopScanner();
+    }
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1046.50, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } catch(e) {}
+    }
+
+    function switchTab(tab) {
+      const tabCountBtn = document.getElementById("tabCountBtn");
+      const tabPrintBtn = document.getElementById("tabPrintBtn");
+      const tabCountContent = document.getElementById("tabCountContent");
+      const tabPrintContent = document.getElementById("tabPrintContent");
+
+      if (tab === 'count') {
+        tabCountBtn.className = "flex-1 py-2 text-center border-b-2 border-orange-600 text-orange-600 transition";
+        tabPrintBtn.className = "flex-1 py-2 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+        tabCountContent.classList.remove("hidden");
+        tabPrintContent.classList.add("hidden");
+        initCountTab();
+      } else {
+        tabPrintBtn.className = "flex-1 py-2 text-center border-b-2 border-slate-800 text-slate-900 transition";
+        tabCountBtn.className = "flex-1 py-2 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+        tabPrintContent.classList.remove("hidden");
+        tabCountContent.classList.add("hidden");
+        initPrintTab();
+        stopScanner();
+      }
+    }
+
+    function switchCountMode(mode) {
+      currentCountMode = mode;
+      const modeTableBtn = document.getElementById("modeTableBtn");
+      const modeFocusBtn = document.getElementById("modeFocusBtn");
+      const tableView = document.getElementById("countTableView");
+      const focusView = document.getElementById("countFocusView");
+
+      if (mode === 'table') {
+        modeTableBtn.className = "flex-1 py-1.5 rounded-xl font-bold text-xs transition bg-white text-orange-600 shadow-sm";
+        modeFocusBtn.className = "flex-1 py-1.5 rounded-xl font-bold text-xs transition text-slate-600 hover:text-slate-900";
+        tableView.classList.remove("hidden");
+        focusView.classList.add("hidden");
+        renderTable();
+      } else {
+        modeFocusBtn.className = "flex-1 py-1.5 rounded-xl font-bold text-xs transition bg-white text-orange-600 shadow-sm";
+        modeTableBtn.className = "flex-1 py-1.5 rounded-xl font-bold text-xs transition text-slate-600 hover:text-slate-900";
+        tableView.classList.add("hidden");
+        focusView.classList.remove("hidden");
+        renderFocusCard();
+      }
+    }
+
+    async function initCountTab() {
+      try {
+        const res = await callGasApi("getLocations");
+        const select = document.getElementById("locSelect");
+        select.innerHTML = '<option value="">-- เลือกทะเบียนรถ / คลังสาขา --</option>';
+        if (res.locations) {
+          res.locations.forEach(loc => {
+            select.innerHTML += `<option value="${loc}">${loc}</option>`;
+          });
+        }
+      } catch (err) {
+        console.error("Init Count Tab Error:", err);
+      }
+    }
+
+    function parseStockValue(decimalVal, packSize) {
+      if (decimalVal === null || decimalVal === undefined || isNaN(decimalVal)) {
+        return { box: 0, pcs: 0, totalPcs: 0 };
+      }
+      const val = Number(decimalVal);
+      if (packSize <= 1) {
+        return { box: Math.round(val), pcs: 0, totalPcs: Math.round(val) };
+      }
+      const box = Math.floor(val);
+      const fraction = val - box;
+      const pcs = Math.round(fraction * packSize);
+      return { box: box, pcs: pcs, totalPcs: (box * packSize) + pcs };
+    }
+
+    async function fetchStock(callback) {
+      const loc = document.getElementById("locSelect").value;
+      if (!loc) return alert("กรุณาเลือก ทะเบียนรถ / คลังสาขา");
+
+      document.getElementById("stockTableBody").innerHTML = '<tr><td colspan="8" class="text-center py-8 text-orange-600 font-medium">กำลังโหลดข้อมูลสต๊อกคงเหลือ...</td></tr>';
+      document.getElementById("tableContainer").classList.remove("hidden");
+
+      try {
+        const res = await callGasApi("getStock", { location: loc });
+        currentItems = res.items || [];
+        itemMasterCache = res.allMaster || {};
+        currentFocusIndex = 0;
+        populateGroupFilter();
+        renderTable();
+        if (currentCountMode === 'focus') renderFocusCard();
+        if (callback) callback();
+      } catch (err) {
+        alert("ไม่สามารถโหลดสต๊อกได้: " + err.message);
+      }
+    }
+
+    function populateGroupFilter() {
+      const groupSelect = document.getElementById("groupFilterSelect");
+      const groups = new Set();
+      currentItems.forEach(i => {
+        if (i.itemGroup) groups.add(i.itemGroup);
+      });
+      const sortedGroups = Array.from(groups).sort((a, b) => a.localeCompare(b, 'th'));
+
+      groupSelect.innerHTML = '<option value="ALL">-- สินค้าทุกกลุ่ม (ทั้งหมด) --</option>';
+      sortedGroups.forEach(g => {
+        groupSelect.innerHTML += `<option value="${g}">🏷️ ${g}</option>`;
+      });
+      document.getElementById("searchInput").value = "";
+    }
+
+    function applyFilters() {
+      renderTable();
+      if (currentCountMode === 'focus') {
+        currentFocusIndex = 0;
+        renderFocusCard();
+      }
+    }
+
+    function clearSearch() {
+      document.getElementById("searchInput").value = "";
+      applyFilters();
+    }
+
+    function filterUncountedOnly() {
+      const statusSelect = document.getElementById("statusFilterSelect");
+      if (statusSelect) {
+        statusSelect.value = statusSelect.value === "UNCOUNTED" ? "ALL" : "UNCOUNTED";
+        applyFilters();
+      }
+    }
+
+    function toggleCategoryAccordion() {
+      const content = document.getElementById("categorySummaryContent");
+      const arrow = document.getElementById("accordionArrow");
+      const badge = document.getElementById("catSummaryBadge");
+
+      if (content.classList.contains("hidden")) {
+        content.classList.remove("hidden");
+        arrow.classList.add("rotate-180");
+        badge.innerText = "เปิดอยู่";
+        badge.className = "text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold";
+      } else {
+        content.classList.add("hidden");
+        arrow.classList.remove("rotate-180");
+        badge.innerText = "พับอยู่";
+        badge.className = "text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-bold";
+      }
+    }
+
+    function matchSystemStock(index) {
+      const item = currentItems[index];
+      const packSize = Number(item.packSize) || 1;
+      const sysParsed = parseStockValue(item.sysStock, packSize);
+
+      item.actBox = sysParsed.box;
+      item.actPcs = packSize > 1 ? sysParsed.pcs : "";
+      updateRowDisplay(index);
+      recalcSummary();
+    }
+
+    function fillMatchAllVisible() {
+      const selectedGroup = document.getElementById("groupFilterSelect") ? document.getElementById("groupFilterSelect").value : "ALL";
+      const selectedStatus = document.getElementById("statusFilterSelect") ? document.getElementById("statusFilterSelect").value : "ALL";
+      const searchText = document.getElementById("searchInput") ? document.getElementById("searchInput").value.trim().toLowerCase() : "";
+
+      let count = 0;
+      currentItems.forEach((item, index) => {
+        const isCounted = (item.actBox !== undefined && item.actBox !== "") || (item.actPcs !== undefined && item.actPcs !== "");
+        let matchStatus = true;
+        if (selectedStatus === "UNCOUNTED") matchStatus = !isCounted;
+        else if (selectedStatus === "COUNTED") matchStatus = isCounted;
+
+        const matchGroup = selectedGroup === "ALL" || item.itemGroup === selectedGroup;
+        const matchSearch = !searchText || item.itemCode.toLowerCase().includes(searchText) || item.itemName.toLowerCase().includes(searchText);
+
+        if (matchGroup && matchSearch && matchStatus && (item.actBox === undefined || item.actBox === "")) {
+          const packSize = Number(item.packSize) || 1;
+          const sysParsed = parseStockValue(item.sysStock, packSize);
+          item.actBox = sysParsed.box;
+          item.actPcs = packSize > 1 ? sysParsed.pcs : "";
+          updateRowDisplay(index);
+          count++;
+        }
+      });
+      recalcSummary();
+      alert(`ดึงยอดตรงตามระบบเรียบร้อย ${count} รายการ`);
+    }
+
+    function getFilteredItemsWithIndices() {
+      const selectedGroup = document.getElementById("groupFilterSelect") ? document.getElementById("groupFilterSelect").value : "ALL";
+      const selectedStatus = document.getElementById("statusFilterSelect") ? document.getElementById("statusFilterSelect").value : "ALL";
+      const searchText = document.getElementById("searchInput") ? document.getElementById("searchInput").value.trim().toLowerCase() : "";
+
+      const list = [];
+      currentItems.forEach((item, originalIndex) => {
+        const matchGroup = selectedGroup === "ALL" || item.itemGroup === selectedGroup;
+        const matchSearch = !searchText || item.itemCode.toLowerCase().includes(searchText) || item.itemName.toLowerCase().includes(searchText);
+
+        const isCounted = (item.actBox !== undefined && item.actBox !== "") || (item.actPcs !== undefined && item.actPcs !== "");
+        let matchStatus = true;
+        if (selectedStatus === "UNCOUNTED") matchStatus = !isCounted;
+        else if (selectedStatus === "COUNTED") matchStatus = isCounted;
+
+        if (matchGroup && matchSearch && matchStatus) {
+          list.push({ item: item, originalIndex: originalIndex });
+        }
+      });
+      return list;
+    }
+
+    function renderFocusCard() {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) {
+        document.getElementById("focusItemCode").innerText = "ไม่พบสินค้า";
+        document.getElementById("focusItemName").innerText = "ไม่มีรายการตรงกับเงื่อนไขค้นหา/ตัวกรอง";
+        document.getElementById("focusDeleteContainer").classList.add("hidden");
+        return;
+      }
+
+      if (currentFocusIndex >= filtered.length) currentFocusIndex = filtered.length - 1;
+      if (currentFocusIndex < 0) currentFocusIndex = 0;
+
+      const currentObj = filtered[currentFocusIndex];
+      const item = currentObj.item;
+      const packSize = Number(item.packSize) || 1;
+      const isEA = packSize <= 1;
+      const sysParsed = parseStockValue(item.sysStock, packSize);
+
+      document.getElementById("focusIndexBadge").innerText = `รายการ ${currentFocusIndex + 1}/${filtered.length}`;
+      document.getElementById("focusGroupBadge").innerText = item.itemGroup || "อื่นๆ";
+      document.getElementById("focusItemCode").innerText = item.itemCode;
+      document.getElementById("focusItemName").innerText = `${item.itemName} (${item.uom})`;
+      document.getElementById("focusItemPrice").innerText = `ราคา: ${(Number(item.price)||0).toLocaleString(undefined, {minimumFractionDigits:2})} ฿`;
+
+      document.getElementById("focusSysBox").innerText = `${sysParsed.box} ${isEA ? 'EA' : 'กล่อง'}`;
+      if (!isEA) {
+        document.getElementById("focusSysPcsBox").classList.remove("hidden");
+        document.getElementById("focusSysPcs").innerText = `${sysParsed.pcs} ชิ้น`;
+        document.getElementById("focusPcsContainer").classList.remove("hidden");
+        document.getElementById("focusLabelBox").innerText = "กล่อง";
+        document.getElementById("focusLabelPcs").innerText = `เศษ (/${packSize})`;
+      } else {
+        document.getElementById("focusSysPcsBox").classList.add("hidden");
+        document.getElementById("focusPcsContainer").classList.add("hidden");
+        document.getElementById("focusLabelBox").innerText = "จำนวน (EA)";
+      }
+
+      document.getElementById("focusInputBox").value = item.actBox !== undefined ? item.actBox : "";
+      document.getElementById("focusInputPcs").value = item.actPcs !== undefined ? item.actPcs : "";
+      document.getElementById("focusRemarkSelect").value = item.remark || "";
+
+      const delContainer = document.getElementById("focusDeleteContainer");
+      if (item.isExtra || item.remark === 'ไม่มีเลขในระบบ') {
+        delContainer.classList.remove("hidden");
+      } else {
+        delContainer.classList.add("hidden");
+      }
+
+      updateFocusDiffDisplay(item, sysParsed, packSize, isEA);
+    }
+
+    function updateFocusDiffDisplay(item, sysParsed, packSize, isEA) {
+      const hasBox = item.actBox !== undefined && item.actBox !== "";
+      const hasPcs = item.actPcs !== undefined && item.actPcs !== "";
+      const diffTextEl = document.getElementById("focusDiffText");
+
+      if (!hasBox && !hasPcs) {
+        diffTextEl.innerText = "ยังไม่ได้นับ";
+        diffTextEl.className = "font-bold mono-num text-slate-400 text-xs";
+        return;
+      }
+
+      const actBox = hasBox ? Number(item.actBox) : 0;
+      const actPcs = hasPcs ? Number(item.actPcs) : 0;
+      const actTotalPcs = (actBox * packSize) + actPcs;
+      const diffPcs = actTotalPcs - sysParsed.totalPcs;
+
+      const diffBoxPart = Math.trunc(diffPcs / packSize);
+      const diffPcsPart = Math.abs(diffPcs % packSize);
+
+      let text = "";
+      if (!isEA) {
+        const sign = diffPcs > 0 ? "+" : (diffPcs < 0 && diffBoxPart === 0 ? "-" : "");
+        text = `${sign}${diffBoxPart} กล่อง` + (diffPcsPart > 0 ? ` ${diffPcsPart} ชิ้น` : "");
+      } else {
+        text = (diffPcs > 0 ? "+" : "") + diffPcs + " EA";
+      }
+
+      const color = diffPcs < 0 ? 'text-rose-600 font-black' : (diffPcs > 0 ? 'text-amber-600 font-black' : 'text-emerald-600 font-black');
+      diffTextEl.innerText = text;
+      diffTextEl.className = `font-bold mono-num text-xs ${color}`;
+    }
+
+    function updateFocusInput(boxVal, pcsVal) {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) return;
+      const originalIndex = filtered[currentFocusIndex].originalIndex;
+      updateBoxPieces(originalIndex, boxVal, pcsVal);
+      renderFocusCard();
+    }
+
+    function adjustFocusBox(delta) {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) return;
+      const originalIndex = filtered[currentFocusIndex].originalIndex;
+      adjustBox(originalIndex, delta);
+      renderFocusCard();
+    }
+
+    function adjustFocusPcs(delta) {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) return;
+      const originalIndex = filtered[currentFocusIndex].originalIndex;
+      adjustPiece(originalIndex, delta);
+      renderFocusCard();
+    }
+
+    function updateFocusRemark(val) {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) return;
+      const originalIndex = filtered[currentFocusIndex].originalIndex;
+      updateRemark(originalIndex, val);
+    }
+
+    function matchFocusCurrent() {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) return;
+      const originalIndex = filtered[currentFocusIndex].originalIndex;
+      matchSystemStock(originalIndex);
+      nextFocusItem();
+    }
+
+    function prevFocusItem() {
+      if (currentFocusIndex > 0) {
+        currentFocusIndex--;
+        renderFocusCard();
+      }
+    }
+
+    function nextFocusItem() {
+      const filtered = getFilteredItemsWithIndices();
+      if (currentFocusIndex < filtered.length - 1) {
+        currentFocusIndex++;
+        renderFocusCard();
+      }
+    }
+
+    function deleteFocusCurrentItem() {
+      const filtered = getFilteredItemsWithIndices();
+      if (filtered.length === 0) return;
+      const item = filtered[currentFocusIndex].item;
+      removeExtraItem(item.itemCode);
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("stockTableBody");
+      tbody.innerHTML = "";
+
+      const selectedGroup = document.getElementById("groupFilterSelect") ? document.getElementById("groupFilterSelect").value : "ALL";
+      const selectedStatus = document.getElementById("statusFilterSelect") ? document.getElementById("statusFilterSelect").value : "ALL";
+      const searchText = document.getElementById("searchInput") ? document.getElementById("searchInput").value.trim().toLowerCase() : "";
+
+      let lastGroup = null;
+      let visibleCount = 0;
+      let totalUncounted = 0;
+
+      currentItems.forEach(i => {
+        const isCounted = (i.actBox !== undefined && i.actBox !== "") || (i.actPcs !== undefined && i.actPcs !== "");
+        if (!isCounted) totalUncounted++;
+      });
+
+      const uncountedBadge = document.getElementById("uncountedCountBadge");
+      if (uncountedBadge) uncountedBadge.innerText = totalUncounted;
+
+      currentItems.forEach((item, index) => {
+        const packSize = Number(item.packSize) || 1;
+        const price = Number(item.price) || 0;
+        const isEA = packSize <= 1;
+
+        const isCounted = (item.actBox !== undefined && item.actBox !== "") || (item.actPcs !== undefined && item.actPcs !== "");
+        
+        let matchStatus = true;
+        if (selectedStatus === "UNCOUNTED") matchStatus = !isCounted;
+        else if (selectedStatus === "COUNTED") matchStatus = isCounted;
+
+        const matchGroup = selectedGroup === "ALL" || item.itemGroup === selectedGroup;
+        const matchSearch = !searchText || item.itemCode.toLowerCase().includes(searchText) || item.itemName.toLowerCase().includes(searchText);
+
+        if (!matchGroup || !matchSearch || !matchStatus) return;
+
+        visibleCount++;
+
+        if (item.itemGroup !== lastGroup) {
+          lastGroup = item.itemGroup;
+          tbody.innerHTML += `
+            <tr class="bg-orange-50/60 border-y border-orange-100">
+              <td colspan="8" class="px-2.5 py-1.5 font-bold text-orange-800 text-[11px] sm:text-xs">
+                🏷️ กลุ่มสินค้า: ${lastGroup}
+              </td>
+            </tr>
+          `;
+        }
+
+        const sysParsed = parseStockValue(item.sysStock, packSize);
+        const actBoxVal = item.actBox !== undefined ? item.actBox : '';
+        const actPcsVal = item.actPcs !== undefined ? item.actPcs : '';
+        const rowBgClass = !isCounted ? 'bg-rose-50/20' : '';
+
+        tbody.innerHTML += `
+          <tr id="row-${item.itemCode}" class="hover:bg-slate-50/80 transition ${rowBgClass}">
+            <td class="p-2 leading-tight">
+              <div class="flex items-center gap-1.5">
+                ${!isCounted ? '<span class="inline-block w-2 h-2 rounded-full bg-rose-500 shrink-0" title="ยังไม่ได้นับ"></span>' : '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="นับแล้ว"></span>'}
+                <span class="font-bold text-slate-900 tracking-wide text-xs">${item.itemCode}</span>
+              </div>
+              <div class="text-[11px] text-slate-500">${item.itemName} <span class="text-orange-600 font-semibold">(${item.uom})</span></div>
+            </td>
+            <td class="p-1.5 text-right text-slate-600 mono-num text-[11px] whitespace-nowrap">${price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            
+            <td class="p-1.5 text-center text-slate-700 mono-num whitespace-nowrap">
+              ${isEA ? `
+                <span class="font-bold text-xs sm:text-sm text-slate-900">${sysParsed.box}</span> <span class="text-[10px] font-semibold text-slate-600">EA</span>
+              ` : `
+                <span class="font-bold text-xs sm:text-sm">${sysParsed.box}</span> <span class="text-[10px] text-slate-500">กล่อง</span>
+                ${sysParsed.pcs > 0 ? `<span class="ml-0.5 text-[10px] text-amber-700 font-semibold">(+${sysParsed.pcs}ชิ้น)</span>` : ''}
+              `}
+            </td>
+
+            <td class="p-1.5 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-1">
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] text-slate-400 font-bold">${isEA ? 'EA' : 'กล่อง'}</span>
+                  <div class="inline-flex items-center rounded-lg border border-slate-300 shadow-sm bg-white overflow-hidden">
+                    <button onclick="adjustBox(${index}, -1)" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold border-r border-slate-200 select-none text-xs">-</button>
+                    <input type="number" id="input-box-${index}" min="0" max="9999" value="${actBoxVal}" 
+                      placeholder="0" oninput="updateBoxPieces(${index}, this.value, null)"
+                      class="w-10 sm:w-12 p-0.5 text-center font-bold text-orange-600 mono-num text-xs focus:outline-none">
+                    <button onclick="adjustBox(${index}, 1)" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold border-l border-slate-200 select-none text-xs">+</button>
+                  </div>
+                </div>
+
+                ${!isEA ? `
+                <div class="flex flex-col items-center">
+                  <span class="text-[8px] text-slate-400 font-bold">เศษ (/${packSize})</span>
+                  <div class="inline-flex items-center rounded-lg border border-slate-300 shadow-sm bg-white overflow-hidden">
+                    <button onclick="adjustPiece(${index}, -1)" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold border-r border-slate-200 select-none text-xs">-</button>
+                    <input type="number" id="input-pcs-${index}" min="0" max="${packSize - 1}" value="${actPcsVal}" 
+                      placeholder="0" oninput="updateBoxPieces(${index}, null, this.value)"
+                      class="w-9 sm:w-10 p-0.5 text-center font-bold text-amber-600 mono-num text-xs focus:outline-none">
+                    <button onclick="adjustPiece(${index}, 1)" class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold border-l border-slate-200 select-none text-xs">+</button>
+                  </div>
+                </div>
+                ` : ''}
+
+                <button onclick="matchSystemStock(${index})" title="กดยืนยันยอดเท่ากับระบบทันที" class="mt-2.5 px-1.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-bold transition active:scale-90">
+                  ✓
+                </button>
+              </div>
+            </td>
+
+            <td id="diff-text-${index}" class="p-1.5 text-center mono-num font-bold whitespace-nowrap text-slate-400 text-xs">-</td>
+            <td id="diff-val-${index}" class="p-1.5 text-right mono-num font-bold whitespace-nowrap text-slate-400 text-xs">-</td>
+            
+            <td class="p-1.5">
+              <select onchange="updateRemark(${index}, this.value)" class="bg-white border border-slate-300 text-slate-700 rounded-lg p-0.5 text-[11px] focus:outline-none">
+                <option value="">-</option>
+                <option value="ไม่มีเลขในระบบ" ${item.remark === 'ไม่มีเลขในระบบ' ? 'selected' : ''}>ไม่มีเลขในระบบ</option>
+                <option value="สลับสี" ${item.remark === 'สลับสี' ? 'selected' : ''}>สลับสี</option>
+                <option value="ของจริงเสีย" ${item.remark === 'ของจริงเสีย' ? 'selected' : ''}>ของจริงเสีย</option>
+                <option value="อื่นๆ" ${item.remark === 'อื่นๆ' ? 'selected' : ''}>อื่นๆ</option>
+              </select>
+            </td>
+
+            <td class="p-1.5 text-center">
+              ${(item.isExtra || item.remark === 'ไม่มีเลขในระบบ') ? `
+                <button onclick="removeExtraItem('${item.itemCode}')" title="ลบรายการที่เพิ่มนอกระบบนี้ออก" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition active:scale-90">
+                  🗑️
+                </button>
+              ` : '<span class="text-slate-300">-</span>'}
+            </td>
+          </tr>
+        `;
+      });
+
+      if (visibleCount === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400 font-medium">ไม่พบรายการสินค้าที่ตรงกับเงื่อนไข</td></tr>';
+      }
+
+      const badge = document.getElementById("rowCountBadge");
+      if (badge) badge.innerText = `${visibleCount} รายการ`;
+
+      currentItems.forEach((_, idx) => updateRowDisplay(idx));
+      recalcSummary();
+    }
+
+    function removeExtraItem(itemCode) {
+      const target = currentItems.find(i => i.itemCode === itemCode);
+      const name = target ? target.itemName : itemCode;
+
+      if (confirm(`ต้องการลบรายการนอกระบบ "${itemCode} - ${name}" ออกจากการตรวจนับใช่หรือไม่?`)) {
+        currentItems = currentItems.filter(i => i.itemCode !== itemCode);
+        populateGroupFilter();
+        renderTable();
+        if (currentCountMode === 'focus') {
+          currentFocusIndex = 0;
+          renderFocusCard();
+        }
+      }
+    }
+
+    function updateRowDisplay(index) {
+      const item = currentItems[index];
+      if (!item) return;
+
+      const packSize = Number(item.packSize) || 1;
+      const price = Number(item.price) || 0;
+      const isEA = packSize <= 1;
+      const sysParsed = parseStockValue(item.sysStock, packSize);
+
+      const diffTextEl = document.getElementById(`diff-text-${index}`);
+      const diffValEl = document.getElementById(`diff-val-${index}`);
+      const inputBoxEl = document.getElementById(`input-box-${index}`);
+      const inputPcsEl = document.getElementById(`input-pcs-${index}`);
+
+      if (inputBoxEl && inputBoxEl.value !== (item.actBox !== undefined ? String(item.actBox) : '')) {
+        inputBoxEl.value = item.actBox !== undefined ? item.actBox : '';
+      }
+      if (inputPcsEl && inputPcsEl.value !== (item.actPcs !== undefined ? String(item.actPcs) : '')) {
+        inputPcsEl.value = item.actPcs !== undefined ? item.actPcs : '';
+      }
+
+      const hasBox = item.actBox !== undefined && item.actBox !== "";
+      const hasPcs = item.actPcs !== undefined && item.actPcs !== "";
+      const isCounted = hasBox || hasPcs;
+
+      if (!isCounted) {
+        if (diffTextEl) {
+          diffTextEl.className = "p-1.5 text-center mono-num font-bold whitespace-nowrap text-slate-400 text-xs";
+          diffTextEl.innerText = "-";
+        }
+        if (diffValEl) {
+          diffValEl.className = "p-1.5 text-right mono-num font-bold whitespace-nowrap text-slate-400 text-xs";
+          diffValEl.innerText = "-";
+        }
+        item.diffDecimal = 0;
+        item.actDecimal = 0;
+        return;
+      }
+
+      const actBox = hasBox ? Number(item.actBox) : 0;
+      const actPcs = hasPcs ? Number(item.actPcs) : 0;
+      const actTotalPcs = (actBox * packSize) + actPcs;
+      const actDecimal = actTotalPcs / packSize;
+      item.actDecimal = actDecimal;
+
+      const diffPcs = actTotalPcs - sysParsed.totalPcs;
+      const diffDecimal = diffPcs / packSize;
+      item.diffDecimal = diffDecimal;
+
+      const diffVal = diffDecimal * price;
+      const diffBoxPart = Math.trunc(diffPcs / packSize);
+      const diffPcsPart = Math.abs(diffPcs % packSize);
+
+      let diffDisplay = "";
+      if (!isEA) {
+        const sign = diffPcs > 0 ? "+" : (diffPcs < 0 && diffBoxPart === 0 ? "-" : "");
+        diffDisplay = `${sign}${diffBoxPart}กล่อง` + (diffPcsPart > 0 ? ` ${diffPcsPart}ชิ้น` : "");
+      } else {
+        diffDisplay = (diffPcs > 0 ? "+" : "") + diffPcs + " EA";
+      }
+
+      const colorClass = diffPcs < 0 ? 'text-rose-600 font-bold' : (diffPcs > 0 ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold');
+
+      if (diffTextEl) {
+        diffTextEl.className = `p-1.5 text-center mono-num whitespace-nowrap text-xs ${colorClass}`;
+        diffTextEl.innerText = diffDisplay;
+      }
+      if (diffValEl) {
+        diffValEl.className = `p-1.5 text-right mono-num whitespace-nowrap text-xs ${colorClass}`;
+        diffValEl.innerText = (diffVal > 0 ? "+" : "") + diffVal.toLocaleString(undefined, {minimumFractionDigits: 2});
+      }
+    }
+
+    function recalcSummary() {
+      let totalSysVal = 0;
+      let totalActVal = 0;
+      let totalDiffVal = 0;
+
+      const groupDiffMap = new Map();
+
+      currentItems.forEach(item => {
+        const packSize = Number(item.packSize) || 1;
+        const price = Number(item.price) || 0;
+        const grp = item.itemGroup || "อื่นๆ";
+        const isEA = packSize <= 1;
+        const sysParsed = parseStockValue(item.sysStock, packSize);
+        
+        totalSysVal += (Number(item.sysStock) || 0) * price;
+
+        const hasBox = item.actBox !== undefined && item.actBox !== "";
+        const hasPcs = item.actPcs !== undefined && item.actPcs !== "";
+        
+        if (hasBox || hasPcs) {
+          const actBox = hasBox ? Number(item.actBox) : 0;
+          const actPcs = hasPcs ? Number(item.actPcs) : 0;
+          const actTotalPcs = (actBox * packSize) + actPcs;
+          const actDecimal = actTotalPcs / packSize;
+          const diffPcs = actTotalPcs - sysParsed.totalPcs;
+          const diffDecimal = diffPcs / packSize;
+          const diffVal = diffDecimal * price;
+
+          totalActVal += actDecimal * price;
+          totalDiffVal += diffVal;
+
+          const grpData = groupDiffMap.get(grp) || { diffVal: 0, diffPcs: 0, isEA: isEA, packSize: packSize };
+          grpData.diffVal += diffVal;
+          grpData.diffPcs += diffPcs;
+          groupDiffMap.set(grp, grpData);
+        }
+      });
+
+      document.getElementById("sumSysVal").innerText = totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+      document.getElementById("sumActVal").innerText = totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+
+      const diffCard = document.getElementById("diffCard");
+      const sumDiffSpan = document.getElementById("sumDiffVal");
+      sumDiffSpan.innerText = (totalDiffVal > 0 ? "+" : "") + totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+
+      if (Math.abs(totalDiffVal) < 0.01) {
+        diffCard.className = "bg-emerald-50/60 border border-emerald-200 rounded-xl p-2 text-left";
+        sumDiffSpan.className = "text-xs sm:text-base font-bold text-emerald-700 mono-num mt-0.5 truncate";
+      } else if (totalDiffVal > 0) {
+        diffCard.className = "bg-amber-50/60 border border-amber-200 rounded-xl p-2 text-left";
+        sumDiffSpan.className = "text-xs sm:text-base font-bold text-amber-700 mono-num mt-0.5 truncate";
+      } else {
+        diffCard.className = "bg-rose-50/60 border border-rose-200 rounded-xl p-2 text-left";
+        sumDiffSpan.className = "text-xs sm:text-base font-bold text-rose-700 mono-num mt-0.5 truncate";
+      }
+
+      const catListDiv = document.getElementById("categorySummaryList");
+      if (catListDiv) {
+        catListDiv.innerHTML = "";
+        if (groupDiffMap.size === 0) {
+          catListDiv.innerHTML = '<div class="col-span-full text-slate-400 italic">ยังไม่มีรายการที่ลงยอดนับ</div>';
+        } else {
+          groupDiffMap.forEach((grpData, grpName) => {
+            const val = grpData.diffVal;
+            const diffPcs = grpData.diffPcs;
+            const isZero = Math.abs(val) < 0.01;
+            const color = isZero ? 'text-slate-800 bg-slate-50 border-slate-200' : (val > 0 ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-rose-700 bg-rose-50 border-rose-200');
+            const sign = val > 0.01 ? "+" : "";
+
+            let countText = "";
+            if (grpData.isEA) {
+              countText = (diffPcs > 0 ? "+" : "") + diffPcs + " EA";
+            } else {
+              const b = Math.trunc(diffPcs / grpData.packSize);
+              const p = Math.abs(diffPcs % grpData.packSize);
+              const bSign = diffPcs > 0 ? "+" : (diffPcs < 0 && b === 0 ? "-" : "");
+              countText = `${bSign}${b}ก. ` + (p > 0 ? `${p}ช.` : "");
+            }
+
+            catListDiv.innerHTML += `
+              <div class="border rounded-xl p-2 flex justify-between items-center ${color}">
+                <div class="truncate max-w-[140px]">
+                  <span class="font-bold text-[11px] block truncate">${grpName}</span>
+                  <span class="text-[10px] opacity-80 mono-num font-semibold">ต่าง: ${countText}</span>
+                </div>
+                <span class="mono-num font-black text-xs shrink-0">${sign}${val.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</span>
+              </div>
+            `;
+          });
+        }
+      }
+    }
+
+    function updateBoxPieces(index, boxVal, pcsVal) {
+      const packSize = Number(currentItems[index].packSize) || 1;
+
+      if (boxVal !== null) {
+        if (boxVal === "") {
+          currentItems[index].actBox = "";
+        } else {
+          let b = Math.max(0, parseInt(boxVal, 10) || 0);
+          if (b > 9999) b = 9999;
+          currentItems[index].actBox = b;
+        }
+      }
+
+      if (pcsVal !== null) {
+        if (pcsVal === "") {
+          currentItems[index].actPcs = "";
+        } else {
+          let p = Math.max(0, parseInt(pcsVal, 10) || 0);
+          const maxPcs = Math.max(0, packSize - 1);
+          if (p > maxPcs) p = maxPcs;
+          currentItems[index].actPcs = p;
+        }
+      }
+
+      updateRowDisplay(index);
+      recalcSummary();
+    }
+
+    function adjustBox(index, delta) {
+      let currentVal = currentItems[index].actBox === "" || currentItems[index].actBox === undefined ? 0 : Number(currentItems[index].actBox);
+      let newVal = Math.max(0, Math.min(9999, currentVal + delta));
+      currentItems[index].actBox = newVal;
+      updateRowDisplay(index);
+      recalcSummary();
+    }
+
+    function adjustPiece(index, delta) {
+      const packSize = Number(currentItems[index].packSize) || 1;
+      let currentVal = currentItems[index].actPcs === "" || currentItems[index].actPcs === undefined ? 0 : Number(currentItems[index].actPcs);
+      let newVal = currentVal + delta;
+      
+      if (newVal >= packSize) {
+        const addBox = Math.floor(newVal / packSize);
+        newVal = newVal % packSize;
+        const currentBox = Number(currentItems[index].actBox) || 0;
+        currentItems[index].actBox = Math.min(9999, currentBox + addBox);
+      } else if (newVal < 0) {
+        newVal = 0;
+      }
+      currentItems[index].actPcs = newVal;
+      updateRowDisplay(index);
+      recalcSummary();
+    }
+
+    function updateRemark(index, val) {
+      currentItems[index].remark = val;
+    }
+
+    function handleGunScan(event) {
+      if (event.key === "Enter") {
+        const barcode = event.target.value.trim().toUpperCase();
+        if (barcode) {
+          processBarcodeCount(barcode);
+          event.target.value = "";
+        }
+      }
+    }
+
+    function processBarcodeCount(barcode) {
+      playBeep();
+      const idx = currentItems.findIndex(i => i.itemCode.toUpperCase() === barcode);
+
+      if (idx !== -1) {
+        adjustBox(idx, 1);
+        highlightRow(currentItems[idx].itemCode);
+      } else {
+        const master = itemMasterCache[barcode] || { name: "ไม่พบใน Item Master", group: "อื่นๆ (เพิ่มนอกระบบ)", price: 0, uom: "EA", packSize: 1 };
+        currentItems.push({
+          itemCode: barcode,
+          itemName: master.name,
+          itemGroup: master.group || "อื่นๆ (เพิ่มนอกระบบ)",
+          price: master.price || 0,
+          uom: master.uom || "EA",
+          packSize: master.packSize || 1,
+          sysStock: 0,
+          actBox: 1,
+          actPcs: 0,
+          diffDecimal: 1,
+          remark: "ไม่มีเลขในระบบ",
+          isExtra: true
+        });
+        currentItems.sort((a, b) => a.itemGroup.localeCompare(b.itemGroup, 'th'));
+        populateGroupFilter();
+        renderTable();
+        highlightRow(barcode);
+      }
+    }
+
+    function addExtraItem() {
+      const codeInput = document.getElementById("addItemCode");
+      const barcode = codeInput.value.trim().toUpperCase();
+      if (!barcode) return alert("กรุณาระบุ Item Code");
+
+      processBarcodeCount(barcode);
+      codeInput.value = "";
+    }
+
+    function highlightRow(itemCode) {
+      const row = document.getElementById("row-" + itemCode);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('bg-orange-100');
+        setTimeout(() => row.classList.remove('bg-orange-100'), 1000);
+      }
+    }
+
+    async function toggleScannerModal() {
+      if (typeof liff !== "undefined" && liff.isLoggedIn && liff.isInClient && liff.isInClient()) {
+        if (liff.scanCodeV2) {
+          try {
+            const res = await liff.scanCodeV2();
+            if (res && res.value) {
+              processBarcodeCount(res.value.trim().toUpperCase());
+            }
+            return;
+          } catch (err) {
+            console.warn("LIFF ScanCode error:", err);
+          }
+        }
+      }
+
+      const modal = document.getElementById("scannerModal");
+      if (modal.classList.contains("hidden")) {
+        modal.classList.remove("hidden");
+        startScanner();
+      } else {
+        modal.classList.add("hidden");
+        stopScanner();
+      }
+    }
+
+    function startScanner() {
+      if (isScanning) return;
+      html5QrCode = new Html5Qrcode("reader");
+      isScanning = true;
+
+      const config = { fps: 10, qrbox: { width: 250, height: 180 } };
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          const barcode = decodedText.trim().toUpperCase();
+          document.getElementById("scannedCodeText").innerText = barcode;
+          document.getElementById("scanResultBadge").classList.remove("hidden");
+          processBarcodeCount(barcode);
+        },
+        () => {}
+      ).catch((err) => {
+        isScanning = false;
+        alert("ไม่สามารถเปิดกล้องได้: " + err);
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => {
+          isScanning = false;
+          document.getElementById("scanResultBadge").classList.add("hidden");
+        }).catch(() => {
+          isScanning = false;
+        });
+      }
+    }
+
+    async function submitData(onlyCurrentGroup) {
+      const location = document.getElementById("locSelect").value;
+      const auditor = document.getElementById("auditorInput").value.trim();
+
+      if (!location) return alert("กรุณาเลือก ทะเบียนรถ / คลังสาขา");
+      if (!auditor) return alert("กรุณาระบุ ชื่อเจ้าหน้าที่ผู้นับสต๊อก");
+
+      const selectedGroup = document.getElementById("groupFilterSelect").value;
+      let targetItems = currentItems;
+
+      if (onlyCurrentGroup) {
+        if (selectedGroup === "ALL") {
+          return alert("กรุณาเลือกกลุ่มสินค้าที่ต้องการบันทึกในช่อง 'กรองกลุ่ม' ก่อน");
+        }
+        targetItems = currentItems.filter(i => i.itemGroup === selectedGroup);
+      }
+
+      const uncounted = targetItems.filter(i => (i.actBox === undefined || i.actBox === "") && (i.actPcs === undefined || i.actPcs === ""));
+      if (uncounted.length > 0) {
+        showCustomAlert(uncounted);
+        return;
+      }
+
+      const saveBtn = document.getElementById("saveBtn");
+      saveBtn.disabled = true;
+      saveBtn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+
+      const payload = {
+        location: location,
+        auditor: auditor,
+        items: targetItems,
+        isEditMode: isEditMode,
+        originalDate: originalAuditDate
+      };
+
+      try {
+        const res = await callGasApi("saveAudit", payload, "POST");
+        saveBtn.disabled = false;
+        saveBtn.innerText = "💾 บันทึกผลการตรวจนับทั้งหมด";
+
+        if (res && res.success) {
+          alert(isEditMode ? "อัปเดตการแก้ไขสต๊อกสำเร็จเรียบร้อยแล้ว!" : (onlyCurrentGroup ? `บันทึกกลุ่ม "${selectedGroup}" สำเร็จแล้ว!` : "บันทึกข้อมูลทุกรายการสำเร็จเรียบร้อยแล้ว!"));
+          isEditMode = false;
+          originalAuditDate = "";
+          document.getElementById("editModeAlert").classList.add("hidden");
+          renderReportView(payload, res.timestamp);
+        } else {
+          showErrorDetail("ฝั่งเซิร์ฟเวอร์แจ้งข้อผิดพลาด:\n" + (res ? res.error : "ไม่ได้รับผลลัพธ์ตอบกลับ"));
+        }
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "💾 บันทึกผลการตรวจนับทั้งหมด";
+        showErrorDetail("เกิดข้อผิดพลาดในการเชื่อมต่อ:\n" + err.message);
+      }
+    }
+
+    function showErrorDetail(msg) {
+      document.getElementById("errorDetailText").innerText = msg;
+      document.getElementById("errorDetailModal").classList.remove("hidden");
+    }
+
+    function showCustomAlert(uncountedItems) {
+      const listDiv = document.getElementById("customAlertList");
+      listDiv.innerHTML = "";
+      document.getElementById("customAlertSubtitle").innerText = `พบสินค้ายังไม่ได้ระบุจำนวนนับ ${uncountedItems.length} รายการ:`;
+
+      uncountedItems.forEach(item => {
+        listDiv.innerHTML += `
+          <div class="py-1 flex justify-between items-center">
+            <div>
+              <span class="font-bold text-slate-800">${item.itemCode}</span>
+              <span class="text-slate-500 text-[10px] block">${item.itemName}</span>
+            </div>
+            <span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-[10px]">ยังไม่นับ</span>
+          </div>
+        `;
+      });
+
+      document.getElementById("customAlertModal").classList.remove("hidden");
+    }
+
+    function closeCustomAlert() {
+      document.getElementById("customAlertModal").classList.add("hidden");
+    }
+
+    async function initPrintTab() {
+      const select = document.getElementById("histLocSelect");
+      const dateSelect = document.getElementById("histDateSelect");
+      select.innerHTML = '<option value="">-- กำลังโหลดรายการที่มีประวัติ... --</option>';
+      dateSelect.innerHTML = '<option value="">-- กรุณาเลือกทะเบียนรถ/คลังก่อน --</option>';
+
+      try {
+        const res = await callGasApi("getHistoryLocations");
+        if (!res.locations || res.locations.length === 0) {
+          select.innerHTML = '<option value="">-- ไม่พบประวัติการตรวจนับในระบบ --</option>';
+          return;
+        }
+        select.innerHTML = '<option value="">-- เลือกทะเบียนรถ / คลังสาขาที่มีประวัติ --</option>';
+        res.locations.forEach(loc => {
+          select.innerHTML += `<option value="${loc}">${loc}</option>`;
+        });
+      } catch (err) {
+        console.error("Init Print Tab Error:", err);
+      }
+    }
+
+    async function loadHistoryDates() {
+      const loc = document.getElementById("histLocSelect").value;
+      const dateSelect = document.getElementById("histDateSelect");
+
+      if (!loc) {
+        dateSelect.innerHTML = '<option value="">-- กรุณาเลือกทะเบียนรถ/คลังก่อน --</option>';
+        return;
+      }
+
+      dateSelect.innerHTML = '<option value="">-- กำลังดึงรอบเวลาตรวจนับ... --</option>';
+
+      try {
+        const res = await callGasApi("getHistoryDates", { location: loc });
+        if (!res.dates || res.dates.length === 0) {
+          dateSelect.innerHTML = '<option value="">ไม่พบประวัติการตรวจนับ</option>';
+          return;
+        }
+        dateSelect.innerHTML = '<option value="">-- เลือกรอบวัน-เวลาที่ตรวจนับ --</option>';
+        res.dates.forEach(d => {
+          dateSelect.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+      } catch (err) {
+        console.error("Load History Dates Error:", err);
+      }
+    }
+
+    async function fetchHistoryReport() {
+      const loc = document.getElementById("histLocSelect").value;
+      const date = document.getElementById("histDateSelect").value;
+
+      if (!loc || !date) return alert("กรุณาเลือก ทะเบียนรถ/คลัง และ รอบวัน-เวลาที่ตรวจนับ");
+
+      try {
+        const res = await callGasApi("getHistoryReport", { location: loc, date: date });
+        if (res && res.items) {
+          renderReportView({
+            location: loc,
+            auditor: res.auditor || "-",
+            items: res.items
+          }, date);
+        } else {
+          alert("ไม่พบข้อมูลรายงานสำหรับรายการที่เลือก");
+        }
+      } catch (err) {
+        alert("ดึงรายงานไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    async function loadHistoryToEdit() {
+      const loc = document.getElementById("histLocSelect").value;
+      const date = document.getElementById("histDateSelect").value;
+
+      if (!loc || !date) return alert("กรุณาเลือก ทะเบียนรถ/คลัง และ รอบวัน-เวลาที่ตรวจนับที่ต้องการแก้ไข");
+
+      if (!confirm(`⚠️ ยืนยันการดึงข้อมูลรอบวันที่-เวลา ${date} ของคลัง ${loc} กลับมาแก้ไขหรือไม่?`)) return;
+
+      try {
+        const res = await callGasApi("getHistoryReport", { location: loc, date: date });
+        if (res && res.items && res.items.length > 0) {
+          isEditMode = true;
+          originalAuditDate = date;
+
+          switchTab('count');
+
+          document.getElementById("locSelect").value = loc;
+          document.getElementById("auditorInput").value = res.auditor !== "-" ? res.auditor : "";
+
+          document.getElementById("editModeAlert").classList.remove("hidden");
+          document.getElementById("editModeDateText").innerText = date;
+          document.getElementById("editModeLocText").innerText = loc;
+
+          currentItems = res.items.map(item => ({
+            itemCode: item.itemCode,
+            itemName: item.itemName,
+            itemGroup: item.itemGroup,
+            price: item.price,
+            uom: item.uom,
+            packSize: item.packSize,
+            sysStock: Number(item.sysStock) || 0,
+            actBox: item.actBox !== undefined ? item.actBox : "",
+            actPcs: item.actPcs !== undefined ? item.actPcs : "",
+            diffDecimal: item.diffDecimal,
+            actDecimal: item.actDecimal,
+            remark: item.remark || "",
+            isExtra: item.remark === "ไม่มีเลขในระบบ"
+          }));
+
+          document.getElementById("tableContainer").classList.remove("hidden");
+          populateGroupFilter();
+          renderTable();
+
+          document.getElementById("tableContainer").scrollIntoView({ behavior: 'smooth' });
+        } else {
+          alert("ไม่พบข้อมูลสำหรับรอบวันที่เลือก");
+        }
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการดึงข้อมูล: " + err.message);
+      }
+    }
+
+    function cancelEditMode() {
+      if (confirm("ต้องการยกเลิกโหมดแก้ไข และล้างหน้าจอตารางใช่หรือไม่?")) {
+        isEditMode = false;
+        originalAuditDate = "";
+        document.getElementById("editModeAlert").classList.add("hidden");
+        document.getElementById("tableContainer").classList.add("hidden");
+        currentItems = [];
+      }
+    }
+
+    function formatDateTime(d) {
+      const pad = (n) => String(n).padStart(2, '0');
+      const day = pad(d.getDate());
+      const month = pad(d.getMonth() + 1);
+      const year = d.getFullYear();
+      const hours = pad(d.getHours());
+      const minutes = pad(d.getMinutes());
+      const seconds = pad(d.getSeconds());
+      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    }
+
+    function handlePrintReport(elementId) {
+      if (elementId) {
+        document.getElementById(elementId).innerText = formatDateTime(new Date());
+      }
+      if (typeof liff !== "undefined" && liff.isInClient && liff.isInClient()) {
+        const confirmExternal = confirm("💡 การสั่งพิมพ์หรือบันทึก PDF จากในแอป LINE อาจจัดหน้าเพี้ยน ต้องการเปิดพิมพ์บนเบราว์เซอร์แยก (Chrome/Safari) หรือไม่?");
+        if (confirmExternal && liff.openWindow) {
+          liff.openWindow({ url: window.location.href, external: true });
+          return;
+        }
+      }
+      window.print();
+    }
+
+    function openBlankSheetModal() {
+      const loc = document.getElementById("locSelect").value;
+      if (!loc) return alert("กรุณาเลือก ทะเบียนรถ / คลังสาขา ก่อนสั่งพิมพ์");
+
+      if (currentItems.length === 0) {
+        fetchStock(() => {
+          promptBlankSheetOptions(loc);
+        });
+      } else {
+        promptBlankSheetOptions(loc);
+      }
+    }
+
+    function promptBlankSheetOptions(loc) {
+      const showSys = confirm("💡 คุณต้องการแสดงตัวเลข 'ยอดสต๊อกระบบ' ในใบตรวจนับหรือไม่?\n\n- กด [OK / ตกลง] = แสดงยอดระบบให้ตรวจเทียบ\n- กด [Cancel / ยกเลิก] = ซ่อนยอดระบบ (นับแบบ Blind Audit)");
+      renderBlankSheetView(loc, showSys);
+    }
+
+    function renderBlankSheetView(loc, showSystemStock) {
+      document.getElementById("mainApp").classList.add("hidden");
+      document.getElementById("printReportView").classList.add("hidden");
+      document.getElementById("printBlankSheetView").classList.remove("hidden");
+
+      const nowStr = formatDateTime(new Date());
+      document.getElementById("blankSheetDate").innerText = nowStr.split(" ")[0];
+      document.getElementById("blankSheetPrintTime").innerText = nowStr;
+      document.getElementById("blankSheetVan").innerText = loc;
+
+      const tbody = document.getElementById("blankTableBody");
+      tbody.innerHTML = "";
+
+      let lastGroup = null;
+
+      currentItems.forEach((item, i) => {
+        const packSize = Number(item.packSize) || 1;
+        const isEA = packSize <= 1;
+        const sysParsed = parseStockValue(item.sysStock, packSize);
+
+        const currentGroup = item.itemGroup || "อื่นๆ";
+        if (currentGroup !== lastGroup) {
+          lastGroup = currentGroup;
+          tbody.innerHTML += `
+            <tr class="group-row-print border-y border-slate-300">
+              <td colspan="8" class="px-2.5 py-1 text-left text-[10px] uppercase font-bold tracking-wide">
+                🏷️ กลุ่มสินค้า: ${lastGroup}
+              </td>
+            </tr>
+          `;
+        }
+
+        const sysBoxDisplay = showSystemStock ? sysParsed.box : "-";
+        const sysPcsDisplay = showSystemStock ? (!isEA ? sysParsed.pcs : "-") : "-";
+
+        tbody.innerHTML += `
+          <tr class="border-b border-slate-300 h-8">
+            <td class="p-1 border-r border-slate-300 text-center">${i + 1}</td>
+            <td class="p-1 border-r border-slate-300 leading-tight">
+              <strong>${item.itemCode}</strong> - ${item.itemName}
+            </td>
+            <td class="p-1 border-r border-slate-300 text-center">${item.uom || 'EA'}</td>
+            
+            <td class="p-1 border-r border-slate-300 text-center mono-num font-semibold text-slate-700 bg-slate-50">${sysBoxDisplay}</td>
+            <td class="p-1 border-r border-slate-300 text-center mono-num text-slate-500 bg-slate-50">${sysPcsDisplay}</td>
+
+            <td class="p-1 border-r border-slate-400 text-center bg-white font-mono text-sm">
+              <div class="h-6 border border-dashed border-slate-300 rounded mx-1"></div>
+            </td>
+            <td class="p-1 border-r border-slate-400 text-center bg-white font-mono text-sm">
+              ${!isEA ? '<div class="h-6 border border-dashed border-slate-300 rounded mx-1"></div>' : '<span class="text-slate-300 text-[10px]">-</span>'}
+            </td>
+
+            <td class="p-1 border-slate-300"></td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderReportView(data, dateStr) {
+      document.getElementById("mainApp").classList.add("hidden");
+      document.getElementById("printBlankSheetView").classList.add("hidden");
+      document.getElementById("printReportView").classList.remove("hidden");
+
+      document.getElementById("rptDate").innerText = dateStr || formatDateTime(new Date());
+      document.getElementById("rptPrintTime").innerText = formatDateTime(new Date());
+      document.getElementById("rptVan").innerText = data.location;
+      document.getElementById("rptSignAuditor").innerText = data.auditor ? `(${data.auditor})` : "(-ชื่อผู้นับ-)";
+
+      const tbody = document.getElementById("rptTableBody");
+      const tfoot = document.getElementById("rptTableFoot");
+      tbody.innerHTML = "";
+
+      let totalSysVal = 0;
+      let totalActVal = 0;
+      let totalDiffVal = 0;
+      
+      let currentGroup = null;
+      let grpSysVal = 0;
+      let grpActVal = 0;
+      let grpDiffVal = 0;
+
+      let grpSysPcs = 0;
+      let grpActPcs = 0;
+      let grpDiffPcs = 0;
+      let grpPackSize = 1;
+      let grpIsEA = true;
+
+      const groupSummaryMap = new Map();
+
+      function appendGroupSubtotalRow(grpName, sVal, aVal, dVal, sPcs, aPcs, dPcs, pSize, isEA) {
+        if (!grpName) return;
+        
+        const isZero = Math.abs(dVal) < 0.01;
+        const color = isZero ? 'text-slate-800' : (dVal < 0 ? 'text-rose-600' : 'text-emerald-700');
+        const sign = dVal > 0.01 ? "+" : "";
+
+        const sysBox = isEA ? sPcs : Math.trunc(sPcs / pSize);
+        const sysPcs = isEA ? '-' : Math.abs(sPcs % pSize);
+
+        const actBox = isEA ? aPcs : Math.trunc(aPcs / pSize);
+        const actPcs = isEA ? '-' : Math.abs(aPcs % pSize);
+
+        const diffBox = isEA ? (dPcs > 0 ? "+" : "") + dPcs : Math.trunc(dPcs / pSize);
+        const diffPcs = isEA ? '-' : Math.abs(dPcs % pSize);
+
+        const statusText = isZero ? 'พอดี' : (dVal < 0 ? 'ต้องเปิดบิลเก็บ' : 'สินค้าเกิน');
+
+        tbody.innerHTML += `
+          <tr class="group-subtotal-print border-b-2 border-slate-400 font-bold text-[9px]">
+            <td colspan="4" class="p-1 text-right uppercase tracking-wide">
+              💰 รวมกลุ่ม [${grpName}]:
+            </td>
+            <td class="p-0.5 text-center mono-num">${sysBox}</td>
+            <td class="p-0.5 text-center mono-num text-slate-500">${sysPcs}</td>
+
+            <td class="p-0.5 text-center mono-num text-orange-700">${actBox}</td>
+            <td class="p-0.5 text-center mono-num text-amber-700">${actPcs}</td>
+
+            <td class="p-0.5 text-center mono-num ${color}">${diffBox}</td>
+            <td class="p-0.5 text-center mono-num ${color}">${diffPcs}</td>
+
+            <td class="p-1 border-r border-slate-300 text-right mono-num font-black">${sVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="p-1 border-r border-slate-300 text-right mono-num font-black">${aVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="p-1 border-r border-slate-300 text-right mono-num font-black ${color}">${sign}${dVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="p-1 text-left text-[8px] font-semibold text-slate-500">${statusText}</td>
+          </tr>
+        `;
+      }
+
+      data.items.forEach((item, i) => {
+        const packSize = Number(item.packSize) || 1;
+        const price = Number(item.price) || 0;
+        const isEA = packSize <= 1;
+        const grp = item.itemGroup || "อื่นๆ";
+        
+        const sysStockNum = Number(item.sysStock) || 0;
+        const sysParsed = parseStockValue(sysStockNum, packSize);
+
+        const actBox = item.actBox !== undefined && item.actBox !== "" ? Number(item.actBox) : 0;
+        const actPcs = item.actPcs !== undefined && item.actPcs !== "" ? Number(item.actPcs) : 0;
+        const actTotalPcs = (actBox * packSize) + actPcs;
+        const actDecimal = actTotalPcs / packSize;
+
+        const diffPcs = actTotalPcs - sysParsed.totalPcs;
+        const diffDecimal = diffPcs / packSize;
+        const diffBoxPart = Math.trunc(diffPcs / packSize);
+        const diffPcsPart = Math.abs(diffPcs % packSize);
+
+        const sysVal = sysStockNum * price;
+        const actVal = actDecimal * price;
+        const diffVal = diffDecimal * price;
+
+        totalSysVal += sysVal;
+        totalActVal += actVal;
+        totalDiffVal += diffVal;
+
+        const grpSummary = groupSummaryMap.get(grp) || { diffVal: 0, diffPcs: 0, packSize: packSize, isEA: isEA };
+        grpSummary.diffVal += diffVal;
+        grpSummary.diffPcs += diffPcs;
+        grpSummary.packSize = packSize;
+        grpSummary.isEA = isEA;
+        groupSummaryMap.set(grp, grpSummary);
+
+        if (grp !== currentGroup) {
+          if (currentGroup !== null) {
+            appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysPcs, grpActPcs, grpDiffPcs, grpPackSize, grpIsEA);
+          }
+          currentGroup = grp;
+          grpSysVal = 0;
+          grpActVal = 0;
+          grpDiffVal = 0;
+          grpSysPcs = 0;
+          grpActPcs = 0;
+          grpDiffPcs = 0;
+          grpPackSize = packSize;
+          grpIsEA = isEA;
+
+          tbody.innerHTML += `
+            <tr class="group-row-print border-y border-orange-200">
+              <td colspan="14" class="px-2.5 py-1 text-left text-[10px] uppercase font-bold tracking-wide">
+                🏷️ กลุ่มสินค้า: ${currentGroup}
+              </td>
+            </tr>
+          `;
+        }
+
+        grpSysVal += sysVal;
+        grpActVal += actVal;
+        grpDiffVal += diffVal;
+        grpSysPcs += sysParsed.totalPcs;
+        grpActPcs += actTotalPcs;
+        grpDiffPcs += diffPcs;
+
+        tbody.innerHTML += `
+          <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+            <td class="p-1 border-r border-slate-200 text-center">${i + 1}</td>
+            <td class="p-1 border-r border-slate-200 leading-tight">
+              <strong>${item.itemCode}</strong> - ${item.itemName}
+            </td>
+            <td class="p-1 border-r border-slate-200 text-center">${item.uom || 'EA'}</td>
+            <td class="p-1 border-r border-slate-200 text-right mono-num">${price.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            
+            <td class="p-1 border-r border-slate-200 text-center mono-num font-semibold">${sysParsed.box}</td>
+            <td class="p-1 border-r border-slate-200 text-center mono-num text-slate-500">${!isEA ? sysParsed.pcs : '-'}</td>
+
+            <td class="p-1 border-r border-slate-200 text-center mono-num font-semibold text-orange-700">${actBox}</td>
+            <td class="p-1 border-r border-slate-200 text-center mono-num text-amber-700 font-medium">${!isEA ? actPcs : '-'}</td>
+
+            <td class="p-1 border-r border-slate-200 text-center mono-num font-bold ${diffPcs < 0 ? 'text-rose-600' : (diffPcs > 0 ? 'text-amber-600' : '')}">${diffBoxPart}</td>
+            <td class="p-1 border-r border-slate-200 text-center mono-num font-bold ${diffPcs < 0 ? 'text-rose-600' : (diffPcs > 0 ? 'text-amber-600' : '')}">${!isEA ? diffPcsPart : '-'}</td>
+
+            <td class="p-1 border-r border-slate-200 text-right mono-num">${sysVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="p-1 border-r border-slate-200 text-right mono-num">${actVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="p-1 border-r border-slate-200 text-right mono-num font-bold ${diffVal < 0 ? 'text-rose-600' : (diffVal > 0 ? 'text-amber-600' : '')}">${diffVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="p-1 text-left">${item.remark || '-'}</td>
+          </tr>
+        `;
+      });
+
+      if (currentGroup !== null) {
+        appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysPcs, grpActPcs, grpDiffPcs, grpPackSize, grpIsEA);
+      }
+
+      tfoot.innerHTML = `
+        <tr>
+          <td colspan="10" class="p-1.5 text-right font-bold text-slate-900 uppercase">รวมทั้งสิ้นทุกรายการ (Grand Total):</td>
+          <td class="p-1.5 text-right mono-num font-black text-slate-900">${totalSysVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
+          <td class="p-1.5 text-right mono-num font-black text-slate-900">${totalActVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
+          <td class="p-1.5 text-right mono-num font-black ${Math.abs(totalDiffVal) < 0.01 ? 'text-slate-800' : (totalDiffVal < 0 ? 'text-rose-600' : 'text-emerald-700')}">${totalDiffVal.toLocaleString(undefined, {minimumFractionDigits:2})} ฿</td>
+          <td></td>
+        </tr>
+      `;
+
+      const rptCatDiv = document.getElementById("rptCategorySummary");
+      if (rptCatDiv) {
+        rptCatDiv.innerHTML = "";
+        groupSummaryMap.forEach((grpData, grpName) => {
+          const val = Number(grpData.diffVal) || 0;
+          const dPcs = Number(grpData.diffPcs) || 0;
+          const pSize = Number(grpData.packSize) || 1;
+          const isZero = Math.abs(val) < 0.01 && dPcs === 0;
+
+          const color = isZero 
+            ? 'text-slate-700 bg-slate-100 border-slate-300' 
+            : (val > 0.01 ? 'text-emerald-800 bg-emerald-50 border-emerald-300 font-bold' : 'text-rose-800 bg-rose-50 border-rose-300 font-bold');
+          
+          const sign = val > 0.01 ? "+" : "";
+
+          let countText = "";
+          if (grpData.isEA) {
+            countText = (dPcs > 0 ? "+" : "") + dPcs + " EA";
+          } else {
+            const b = Math.trunc(dPcs / pSize);
+            const p = Math.abs(dPcs % pSize);
+            const bSign = dPcs > 0 ? "+" : (dPcs < 0 && b === 0 ? "-" : "");
+            countText = `${bSign}${b}ก. ` + (p > 0 ? `${p}ช.` : "");
+          }
+
+          rptCatDiv.innerHTML += `
+            <div class="border rounded-xl p-2 flex justify-between items-center ${color}">
+              <div class="truncate max-w-[140px]">
+                <span class="font-bold text-[10px] block truncate text-slate-900">${grpName}</span>
+                <span class="text-[9px] opacity-80 font-mono">(${isZero ? 'ยอดตรง' : countText})</span>
+              </div>
+              <span class="mono-num font-black text-xs shrink-0">${isZero ? '0.00 ฿' : sign + val.toLocaleString(undefined, {minimumFractionDigits: 2}) + ' ฿'}</span>
+            </div>
+          `;
+        });
+      }
+    }
+
+    function backToApp() {
+      document.getElementById("printReportView").classList.add("hidden");
+      document.getElementById("printBlankSheetView").classList.add("hidden");
+      document.getElementById("mainApp").classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>

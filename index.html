@@ -73,7 +73,7 @@
 
       @page { 
         size: A4 landscape; 
-        margin: 6mm 6mm 6mm 6mm; 
+        margin: 5mm; 
       }
     }
   </style>
@@ -126,6 +126,9 @@
       </div>
       <div class="flex items-center gap-2">
         <span id="lineUserBadge" class="hidden text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded-lg border border-emerald-200"></span>
+        <button onclick="resetAuditForm()" class="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-1 rounded-xl transition" title="ล้างหน้าจอเพื่อนับคันถัดไป">
+          🔄 ล้างหน้าจอ
+        </button>
         <button onclick="logout()" class="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl transition">
           ออกจากระบบ
         </button>
@@ -203,7 +206,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -827,7 +830,7 @@
     }
 
     // ==========================================
-    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (แก้เสียงแตกซ่า 100%)
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (แก้เสียงแตก 100%)
     // ==========================================
     let isAudioUnlocked = false;
     let audioCtx = null;
@@ -851,7 +854,7 @@
     window.addEventListener('touchstart', unlockAudioEngine, { once: true });
     window.addEventListener('click', unlockAudioEngine, { once: true });
 
-    // 1. เสียงตี๊ดสำเร็จ (คลื่น Sine ใส นุ่มนวล ไม่แตกซ่า)
+    // 1. เสียงตี๊ดสำเร็จ (คลื่น Sine นุ่มนวล ไม่แตกซ่า)
     function playSuccessBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -866,7 +869,6 @@
         osc.type = "sine";
         osc.frequency.setValueAtTime(880, now);
         
-        // ใช้ Linear Ramp นุ่มนวล ตัดเสียงแตก
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
         gain.gain.linearRampToValueAtTime(0, now + 0.22);
@@ -1074,6 +1076,21 @@
       stopScanner();
     }
 
+    function resetAuditForm() {
+      if (confirm("ต้องการล้างข้อมูลหน้าจอ เพื่อเริ่มนับคันใหม่ใช่หรือไม่?")) {
+        currentItems = [];
+        document.getElementById("locSelect").value = "";
+        document.getElementById("tableContainer").classList.add("hidden");
+        document.getElementById("preAuditSummaryBanner").classList.add("hidden");
+        document.getElementById("draftAlert").classList.add("hidden");
+        document.getElementById("criticalThresholdAlert").classList.add("hidden");
+        isEditMode = false;
+        originalAuditDate = "";
+        document.getElementById("editModeAlert").classList.add("hidden");
+        stopScanner();
+      }
+    }
+
     function playBeep() {
       playSuccessBeep();
     }
@@ -1137,13 +1154,17 @@
       }
     }
 
+    // ==========================================
+    // ⚙️ PARSE STOCK VALUE (แก้ไขหน่วย EA ไม่แสดงยอดระบบ)
+    // ==========================================
     function parseStockValue(decimalVal, packSize) {
       if (decimalVal === null || decimalVal === undefined || isNaN(decimalVal)) {
         return { box: 0, pcs: 0, totalPcs: 0 };
       }
       const val = Number(decimalVal);
       if (packSize <= 1) {
-        return { box: 0, pcs: Math.round(val), totalPcs: Math.round(val) };
+        // หากเป็นหน่วย EA ให้ใส่จำนวนเต็มไว้ที่ box เพื่อให้ตารางดึงไปแสดงผล ${sysParsed.box} EA
+        return { box: Math.round(val), pcs: 0, totalPcs: Math.round(val) };
       }
       const box = Math.floor(val);
       const fraction = val - box;
@@ -2107,7 +2128,6 @@
       document.getElementById("manualScanInput").focus();
     }
 
-    // แสดงการแจ้งเตือนสแกน/พิมพ์สำเร็จแบบเห็นชัดเจน ไม่หายไปไหน
     function showScanNotification(code, name) {
       const notif = document.getElementById("scanStatusNotification");
       const notifText = document.getElementById("notificationCodeText");
@@ -2117,7 +2137,6 @@
       }
     }
 
-    // อัปเดตการ์ดแสดงผล ทั้งยอดระบบ และยอดนับจริง
     function updateFeedbackCard(item) {
       const packSize = Number(item.packSize) || 1;
       const isEA = packSize <= 1;
@@ -2127,7 +2146,7 @@
       document.getElementById("scanCardName").innerText = item.itemName;
       document.getElementById("scanCardUom").innerText = item.uom || 'EA';
 
-      // แสดงยอดระบบที่แท้จริง
+      // แสดงยอดระบบที่ถูกต้อง
       const sysDisplay = isEA ? `${sysParsed.box} EA` : `${sysParsed.box} กล่อง` + (sysParsed.pcs > 0 ? ` +${sysParsed.pcs}ชิ้น` : "");
       document.getElementById("scanCardSysQty").innerText = sysDisplay;
 

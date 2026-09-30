@@ -80,7 +80,7 @@
 </head>
 <body id="appBody" class="bg-slate-100/80 min-h-screen text-slate-800 p-1.5 sm:p-4 md:p-6 flex flex-col justify-center items-center select-none">
 
-  <!-- Fullscreen Loading Overlay ป้องกันการกดซ้ำ -->
+  <!-- Fullscreen Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex flex-col items-center justify-center gap-3 hidden text-white">
     <div class="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
     <div id="loadingText" class="text-sm font-bold tracking-wide">กำลังประมวลผล...</div>
@@ -162,7 +162,7 @@
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
-        <span class="text-base">✏️</span>
+        <span class="text-base">✏️️</span>
         <span>โหมดแก้ไขย้อนหลัง: รอบ <span id="editModeDateText" class="text-sky-950 font-black underline"></span> คลัง <span id="editModeLocText" class="text-sky-950 font-black underline"></span></span>
       </div>
       <button onclick="cancelEditMode()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
@@ -206,7 +206,7 @@
         </div>
       </div>
 
-      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ (เฉพาะจำนวนหน่วยเต็ม) -->
+      <!-- แบนเนอร์แสดงสรุปยอดรวมระบบก่อนตรวจนับ -->
       <div id="preAuditSummaryBanner" class="hidden mb-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-50/50 border border-amber-300 rounded-2xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2 border-b border-amber-200/80 pb-1.5">
           <div class="flex items-center gap-1.5">
@@ -277,7 +277,7 @@
           </div>
         </div>
 
-        <!-- การ์ดสรุปผลต่างรายกลุ่ม: พับเก็บได้ -->
+        <!-- การ์ดสรุปผลต่างรายกลุ่ม -->
         <div class="bg-white border border-slate-200 rounded-2xl mb-2.5 shadow-sm overflow-hidden">
           <div onclick="toggleCategoryAccordion()" class="bg-slate-50/80 p-2 sm:p-2.5 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition">
             <div class="text-[11px] sm:text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -428,6 +428,7 @@
           </div>
         </div>
 
+        <!-- แถบเพิ่มสินค้าด่วนนอกระบบ -->
         <div class="mb-3 p-2.5 border border-dashed border-amber-300 bg-amber-50/60 rounded-2xl flex flex-col sm:flex-row gap-2 items-center">
           <div class="text-xs font-bold text-amber-900 uppercase whitespace-nowrap">➕ สินค้าเกินนอกระบบ:</div>
           <input type="text" id="addItemCode" placeholder="ระบุ Item Code หรือ Barcode" class="w-full sm:w-2/3 bg-white border border-amber-300 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-mono uppercase focus:border-orange-500 focus:outline-none">
@@ -447,7 +448,7 @@
       </div>
     </div>
 
-    <!-- TAB 2: ค้นหาและพิมพ์ย้อนหลัง (ปรับปรุงใหม่: มีปุ่มดึงยอดล่าสุดทันที ไม่ค้าง) -->
+    <!-- TAB 2: ค้นหาและพิมพ์ย้อนหลัง -->
     <div id="tabPrintContent" class="hidden">
       <div class="space-y-3 bg-slate-50 border border-slate-200 p-3 sm:p-4 rounded-2xl text-xs sm:text-sm mb-4">
         <div>
@@ -475,7 +476,6 @@
           </button>
         </div>
 
-        <!-- ⚡ แถบด่วนพิเศษ: ดึงประวัติที่เพิ่งนับล่าสุดทันที ไม่ต้องรอง้อ Dropdown -->
         <div id="quickRecentBox" class="hidden mt-3 pt-2.5 border-t border-slate-200">
           <div class="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
             <span>⚡ รอบที่เพิ่งตรวจนับล่าสุดบนเครื่องนี้:</span>
@@ -505,9 +505,8 @@
     </div>
   </div>
 
-  <!-- 📷 หน้าต่างสแกนเนอร์มาตรฐานสากล พร้อมช่องพิมพ์รหัส + แสดงยอดระบบและยอดนับคู่กัน -->
+  <!-- 📷 กล้อง Scanner Modal -->
   <div id="scannerModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex flex-col items-center justify-between p-3 sm:p-5 hidden">
-    <!-- ส่วนหัวหน้าต่างกล้อง -->
     <div class="w-full max-w-md flex justify-between items-center text-white pb-2 border-b border-white/10">
       <div class="flex items-center gap-2">
         <span class="text-base">📷</span>
@@ -521,12 +520,9 @@
       </div>
     </div>
 
-    <!-- ส่วนเนื้อหาตรงกลาง -->
     <div class="w-full max-w-md my-auto flex flex-col items-center">
-      <!-- กรอบกล้อง Compact -->
       <div id="reader" class="overflow-hidden rounded-2xl border-2 border-orange-500 w-full max-h-40 bg-black shadow-lg mb-2"></div>
       
-      <!-- ⌨️ ช่องพิมพ์รหัสสินค้า/บาร์โค้ดด้วยมือ (กรณีสแกนยากหรือบาร์โค้ดยับ) -->
       <div class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2 flex items-center gap-1.5 shadow-md mb-2">
         <input type="text" id="manualScanInput" placeholder="🔍 พิมพ์ Item Code / Barcode (+1)" 
           class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-400 font-mono uppercase focus:outline-none focus:border-orange-500"
@@ -536,12 +532,10 @@
         </button>
       </div>
 
-      <!-- แถบป้ายแจ้งเตือนการสแกนล่าสุด (Status Badge) -->
       <div id="scanStatusNotification" class="w-full mb-1.5 text-center text-[11px] font-bold py-1 px-3 rounded-lg bg-emerald-500 text-white shadow-sm hidden">
         ✓ สแกนสำเร็จ: <span id="notificationCodeText"></span>
       </div>
 
-      <!-- การ์ดยืนยันยอดสินค้า พร้อมแสดงยอดระบบคู่กับยอดนับจริง และ Quick Add -->
       <div id="scannedFeedbackCard" class="w-full bg-white rounded-2xl p-3 shadow-2xl border border-slate-200 transition-all transform duration-150">
         <div class="flex justify-between items-start mb-2">
           <div class="flex-1 mr-2 truncate">
@@ -551,15 +545,12 @@
           <span id="scanCardUom" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200 uppercase">EA</span>
         </div>
 
-        <!-- แถบเปรียบเทียบยอดระบบ vs ยอดนับจริง -->
         <div class="grid grid-cols-2 gap-2 mb-2">
-          <!-- กล่องยอดระบบ -->
           <div class="bg-slate-100 border border-slate-200 rounded-xl p-2 text-center">
             <span class="text-[10px] font-bold text-slate-500 uppercase block">ยอดระบบ (Snapshot)</span>
             <span id="scanCardSysQty" class="text-lg font-black text-slate-800 mono-num">0</span>
           </div>
 
-          <!-- กล่องยอดนับจริง (ปรับยอดได้ตรงนี้) -->
           <div class="bg-orange-50 border border-orange-200 rounded-xl p-2 text-center">
             <span class="text-[10px] font-bold text-orange-700 uppercase block">ยอดนับจริง (หน้างาน)</span>
             <div class="flex items-center justify-center gap-1 mt-0.5">
@@ -570,7 +561,6 @@
           </div>
         </div>
 
-        <!-- แถบปุ่ม Quick Add (+1, +5, +10, =ระบบ) เร่งสปีด -->
         <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-200 mb-2.5">
           <button onclick="adjustScannedItemQty(1)" class="bg-slate-50 hover:bg-orange-50 active:bg-orange-100 border border-slate-300 text-slate-800 font-black py-1 rounded-lg text-xs mono-num shadow-xs transition">
             +1
@@ -597,9 +587,61 @@
       </div>
     </div>
 
-    <!-- ส่วนท้าย -->
     <div class="w-full max-w-md text-center text-[10px] text-white/50 pt-1">
       💡 สามารถพิมพ์รหัสหรือบาร์โค้ดลงในช่องค้นหาด้านบนได้ทันที
+    </div>
+  </div>
+
+  <!-- 🆕 Modal สำหรับลงทะเบียนสินค้าใหม่ที่ไม่มีในระบบ (On-the-fly Item Registration) -->
+  <div id="newItemModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 text-left border border-slate-200">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-9 h-9 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 text-lg font-bold">➕</div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">ไม่พบสินค้านี้ในระบบ</h3>
+          <p class="text-xs text-slate-500">กรุณาระบุรายละเอียดเพื่อเพิ่มตรวจนับนอกระบบ</p>
+        </div>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-0.5">รหัสสินค้า / บาร์โค้ด</label>
+          <input type="text" id="modalNewItemCode" class="w-full bg-slate-100 border border-slate-300 rounded-xl p-2 font-mono font-bold text-slate-700 uppercase" readonly>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-0.5">ชื่อสินค้า <span class="text-rose-500">*</span></label>
+          <input type="text" id="modalNewItemName" placeholder="เช่น ไอศกรีมรสพิเศษ / สินค้าแถม" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 font-medium focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-700 mb-0.5">กลุ่มสินค้า</label>
+            <input type="text" id="modalNewItemGroup" placeholder="เช่น สินค้าใหม่ / อื่นๆ" value="สินค้าไม่มีในระบบ" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 focus:outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-0.5">ราคาต่อหน่วย (฿)</label>
+            <input type="number" id="modalNewItemPrice" placeholder="0.00" value="0" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 focus:outline-none mono-num">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-700 mb-0.5">หน่วยนับ (UOM)</label>
+            <input type="text" id="modalNewItemUom" placeholder="EA, ถ้วย, แท่ง" value="EA" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 focus:outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-0.5">บรรจุ/กล่อง (Pack Size)</label>
+            <input type="number" id="modalNewItemPackSize" placeholder="1" value="1" min="1" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 focus:outline-none mono-num">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button onclick="confirmCreateNewItem()" class="flex-1 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition">
+          ✓ บันทึกเพิ่มเข้ารายการ
+        </button>
+        <button onclick="closeNewItemModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition">
+          ยกเลิก
+        </button>
+      </div>
     </div>
   </div>
 
@@ -659,7 +701,7 @@
       </div>
     </div>
 
-    <!-- แถบการ์ดสรุปยอดเงิน 3 ช่องหลัก (ตรงกับหน้าตรวจนับสต๊อก) -->
+    <!-- แถบการ์ดสรุปยอดเงิน 3 ช่องหลัก -->
     <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
       <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
         <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
@@ -749,7 +791,7 @@
 
     <div class="mt-6 text-center space-x-3 no-print">
       <button onclick="handlePrintReport('rptPrintTime')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs tracking-wider uppercase shadow-md transition">
-        🖨️️ สั่งพิมพ์ / บันทึกเป็น PDF
+        🖨 สั่งพิมพ์ / บันทึกเป็น PDF
       </button>
       <button onclick="backToApp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-5 rounded-xl text-xs border border-slate-200 transition">
         🔙 ย้อนกลับหน้าหลัก
@@ -842,11 +884,11 @@
     let html5QrCode = null;
     let isScanning = false;
 
-    // ระบบล็อกกล้องมาตรฐานสากล (Freeze on scan)
+    // ระบบล็อกกล้อง
     let isScanFrozen = false;
     let lastScannedItemIndex = -1;
 
-    // ระบบไฟฉาย (Torch)
+    // ระบบไฟฉาย
     let isTorchOn = false;
     let videoTrack = null;
 
@@ -859,7 +901,7 @@
     const SESSION_DURATION = 12 * 60 * 60 * 1000;
 
     // ==========================================
-    // 📳 HAPTIC FEEDBACK ENGINE (สั่นเตือนในมือ)
+    // 📳 HAPTIC FEEDBACK ENGINE
     // ==========================================
     function triggerHapticSuccess() {
       try {
@@ -874,7 +916,7 @@
     }
 
     // ==========================================
-    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE (แก้เสียงแตก 100%)
+    // 🔊 AUDIO & SPEECH SYNTHESIS ENGINE
     // ==========================================
     let isAudioUnlocked = false;
     let audioCtx = null;
@@ -1010,7 +1052,7 @@
     }
 
     // ==========================================
-    // 🚀 BRIDGE API: สื่อสารกับ Google Apps Script (ยิง 2 ระบบ GET/POST Auto)
+    // 🚀 BRIDGE API: สื่อสารกับ Google Apps Script
     // ==========================================
     async function callGasApi(action, params = {}, method = "AUTO") {
       const payloadData = { action, ...params };
@@ -1151,10 +1193,6 @@
       }
     }
 
-    function playBeep() {
-      playSuccessBeep();
-    }
-
     function switchTab(tab) {
       const tabCountBtn = document.getElementById("tabCountBtn");
       const tabPrintBtn = document.getElementById("tabPrintBtn");
@@ -1268,6 +1306,12 @@
         timestamp: new Date().getTime(),
         items: currentItems.map(i => ({
           itemCode: i.itemCode,
+          itemName: i.itemName,
+          itemGroup: i.itemGroup,
+          price: i.price,
+          uom: i.uom,
+          packSize: i.packSize,
+          sysStock: i.sysStock,
           actBox: i.actBox,
           actPcs: i.actPcs,
           remark: i.remark,
@@ -1307,8 +1351,11 @@
             target.actBox = dItem.actBox;
             target.actPcs = dItem.actPcs;
             target.remark = dItem.remark;
+          } else if (dItem.isExtra) {
+            currentItems.push(dItem);
           }
         });
+        populateGroupFilter();
         renderTable();
         if (currentCountMode === 'focus') renderFocusCard();
         document.getElementById("draftAlert").classList.add("hidden");
@@ -2083,11 +2130,13 @@
       inputEl.value = "";
     }
 
+    // ⚡ ฟังก์ชันตรวจนับบาร์โค้ด & อนุญาตให้ลงทะเบียนสินค้าใหม่ได้ทันที
     function processBarcodeCount(barcode) {
       if (isScanFrozen) return;
 
       const cleanCode = barcode.trim().toUpperCase();
 
+      // 1. ตรวจในรายการที่กำลังนับอยู่ปัจจุบัน
       let idx = currentItems.findIndex(i => 
         i.itemCode.toUpperCase() === cleanCode || (i.barcode && i.barcode.toUpperCase() === cleanCode)
       );
@@ -2119,6 +2168,7 @@
         return;
       }
 
+      // 2. ตรวจในฐานข้อมูลแม่ (Item Master)
       let foundInMaster = null;
       let masterItemCode = "";
 
@@ -2135,16 +2185,16 @@
         }
       }
 
+      // 3. หากไม่พบทั้งในตารางและ Master Cache -> เปิดหน้าต่างให้กรอกเพิ่มทันที (แก้ปัญหาเพิ่มไม่ได้)
       if (!foundInMaster) {
         freezeScanner();
         playErrorBeep();
         triggerHapticError();
-        speakText("ไม่พบสินค้า");
-        alert(`❌ ไม่พบข้อมูลในระบบ (Item Master)\n\nรหัส/บาร์โค้ด: "${cleanCode}"\nกรุณาตรวจเช็คกล่องสินค้า หรือแจ้งฝ่ายสต๊อกเพื่อเพิ่มสินค้าเข้าระบบ`);
-        resumeScanningNext();
+        promptAddNewItem(cleanCode);
         return;
       }
 
+      // กรณีพบใน Master Cache แต่ยังไม่มีในคลังนี้
       freezeScanner();
       playSuccessBeep();
       triggerHapticSuccess();
@@ -2165,7 +2215,6 @@
       });
 
       speakText(1);
-
       currentItems.sort((a, b) => (a.itemGroup || '').localeCompare(b.itemGroup || '', 'th'));
       
       const groupFilter = document.getElementById("groupFilterSelect");
@@ -2194,6 +2243,83 @@
         renderFocusCard();
       }
 
+      autoSaveDraft();
+    }
+
+    // ==========================================
+    // ➕ ฟังก์ชันรองรับการเพิ่มสินค้าใหม่นอกระบบทันที
+    // ==========================================
+    function promptAddNewItem(code) {
+      document.getElementById("modalNewItemCode").value = code;
+      document.getElementById("modalNewItemName").value = "";
+      document.getElementById("modalNewItemGroup").value = "สินค้าไม่มีในระบบ";
+      document.getElementById("modalNewItemPrice").value = "0";
+      document.getElementById("modalNewItemUom").value = "EA";
+      document.getElementById("modalNewItemPackSize").value = "1";
+
+      document.getElementById("newItemModal").classList.remove("hidden");
+      setTimeout(() => document.getElementById("modalNewItemName").focus(), 200);
+    }
+
+    function closeNewItemModal() {
+      document.getElementById("newItemModal").classList.add("hidden");
+      resumeScanningNext();
+    }
+
+    function confirmCreateNewItem() {
+      const code = document.getElementById("modalNewItemCode").value.trim().toUpperCase();
+      const name = document.getElementById("modalNewItemName").value.trim();
+      const group = document.getElementById("modalNewItemGroup").value.trim() || "สินค้าไม่มีในระบบ";
+      const price = parseFloat(document.getElementById("modalNewItemPrice").value) || 0;
+      const uom = document.getElementById("modalNewItemUom").value.trim().toUpperCase() || "EA";
+      const packSize = Math.max(1, parseInt(document.getElementById("modalNewItemPackSize").value, 10) || 1);
+
+      if (!name) {
+        alert("กรุณาระบุชื่อสินค้า");
+        document.getElementById("modalNewItemName").focus();
+        return;
+      }
+
+      currentItems.push({
+        itemCode: code,
+        barcode: code,
+        itemName: name,
+        itemGroup: group,
+        price: price,
+        uom: uom,
+        packSize: packSize,
+        sysStock: 0,
+        actBox: 1,
+        actPcs: 0,
+        diffDecimal: 1,
+        remark: "ไม่มีเลขในระบบ",
+        isExtra: true
+      });
+
+      // แคชเข้า itemMasterCache ไว้เพื่อคราวต่อไปสแกนเจอทันที
+      itemMasterCache[code] = {
+        name: name,
+        group: group,
+        price: price,
+        uom: uom,
+        packSize: packSize,
+        barcode: code
+      };
+
+      currentItems.sort((a, b) => (a.itemGroup || '').localeCompare(b.itemGroup || '', 'th'));
+      populateGroupFilter();
+      renderTable();
+      highlightRow(code);
+
+      lastScannedItemIndex = currentItems.findIndex(i => i.itemCode === code);
+      if (lastScannedItemIndex !== -1) {
+        updateFeedbackCard(currentItems[lastScannedItemIndex]);
+      }
+      showScanNotification(code, name);
+
+      closeNewItemModal();
+      playSuccessBeep();
+      triggerHapticSuccess();
       autoSaveDraft();
     }
 
@@ -2469,7 +2595,6 @@
         if (res && res.success) {
           clearDraftData();
 
-          // เก็บข้อมูลล่าสุดไว้ในเครื่องสำหรับเปิดดูด่วนทันที ไม่ต้องรอนาน
           localStorage.setItem("wsg_latest_saved_report", JSON.stringify({
             location: location,
             date: res.timestamp,
@@ -2523,14 +2648,13 @@
     }
 
     // ==========================================
-    // 🖨️ TAB 2: ดึงประวัติที่รวดเร็ว ฉลาด และไม่ติดค้าง
+    // 🖨️ TAB 2: ดึงประวัติที่รวดเร็ว
     // ==========================================
     async function initPrintTab() {
       const select = document.getElementById("histLocSelect");
       const dateSelect = document.getElementById("histDateSelect");
       dateSelect.innerHTML = '<option value="">-- กรุณาเลือกทะเบียนรถ/คลังก่อน --</option>';
 
-      // ดึงรายชื่อคลังจาก Dropdown หน้าแรกที่มีอยู่แล้วมาใช้งานได้ทันที ไม่ต้องรอเน็ต
       const mainLocSelect = document.getElementById("locSelect");
       if (mainLocSelect && mainLocSelect.options.length > 1) {
         select.innerHTML = '<option value="">-- เลือกทะเบียนรถ / คลังสาขา --</option>';
@@ -2538,7 +2662,6 @@
           const val = mainLocSelect.options[i].value;
           select.innerHTML += `<option value="${val}">${val}</option>`;
         }
-        // เลือกรถ/คลังเดียวกับหน้าแรกให้แบบอัตโนมัติ
         if (mainLocSelect.value) {
           select.value = mainLocSelect.value;
           loadHistoryDates();
@@ -2546,7 +2669,6 @@
         return;
       }
 
-      // หากหน้าแรกยังไม่โหลด ให้ขอ API จากระบบ
       select.innerHTML = '<option value="">-- กำลังโหลดรายการคลัง... --</option>';
       try {
         const res = await callGasApi("getLocations", {}, "AUTO");
@@ -2677,9 +2799,6 @@
       }
     }
 
-    // ==========================================
-    // ⚡ ฟังก์ชันดึงประวัติล่าสุดด่วนในเครื่อง (ไม่ต้องรอเน็ต)
-    // ==========================================
     function checkQuickRecent() {
       const recentBox = document.getElementById("quickRecentBox");
       const savedRaw = localStorage.getItem("wsg_latest_saved_report");
@@ -2980,7 +3099,7 @@
           tbody.innerHTML += `
             <tr class="group-row-print border-y border-orange-200">
               <td colspan="14" class="px-2.5 py-1 text-left text-[10px] uppercase font-bold tracking-wide">
-                🏷️️ กลุ่มสินค้า: ${currentGroup}
+                🏷 กลุ่มสินค้า: ${currentGroup}
               </td>
             </tr>
           `;
@@ -3027,7 +3146,6 @@
         appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysBoxSum, grpSysPcsSum, grpActBoxSum, grpActPcsSum, grpDiffBoxSum, grpDiffPcsSum);
       }
 
-      // แสดงยอดรวมในการ์ด 3 ช่องหลักของหน้ารายงาน
       const rptSysValEl = document.getElementById("rptSumSysVal");
       const rptActValEl = document.getElementById("rptSumActVal");
       const rptDiffValEl = document.getElementById("rptSumDiffVal");
@@ -3101,7 +3219,7 @@
           } else {
             const b = Math.trunc(dPcs / pSize);
             const p = Math.abs(dPcs % pSize);
-            const bSign = dPcs > 0 ? "+" : (diffPcs < 0 && b === 0 ? "-" : "");
+            const bSign = dPcs > 0 ? "+" : (dPcs < 0 && b === 0 ? "-" : "");
             countText = `${bSign}${b}ก. ` + (p > 0 ? `${p}ช.` : "");
           }
 

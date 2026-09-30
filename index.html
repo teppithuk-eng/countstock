@@ -1007,6 +1007,16 @@
           return await res.json();
         }
       } catch (err) {
+        // Fallback: หาก GET ล้มเหลวจากปัญหา Encoding/CORS ให้ลอง POST ให้อัตโนมัติ
+        if (method === "GET") {
+          try {
+            const resPost = await fetch(GAS_API_URL, {
+              method: "POST",
+              body: JSON.stringify({ action, payload: params })
+            });
+            return await resPost.json();
+          } catch(e) {}
+        }
         throw new Error("ติดต่อ Google Apps Script ไม่สำเร็จ: " + err.message);
       }
     }
@@ -2501,7 +2511,7 @@
       dateSelect.innerHTML = '<option value="">-- กรุณาเลือกทะเบียนรถ/คลังก่อน --</option>';
 
       try {
-        const res = await callGasApi("getHistoryLocations");
+        const res = await callGasApi("getHistoryLocations", {}, "POST");
         if (!res.locations || res.locations.length === 0) {
           select.innerHTML = '<option value="">-- ไม่พบประวัติการตรวจนับในระบบ --</option>';
           return;
@@ -2512,6 +2522,7 @@
         });
       } catch (err) {
         console.error("Init Print Tab Error:", err);
+        select.innerHTML = '<option value="">-- โหลดรายการไม่สำเร็จ (กดสลับแท็บเพื่อลองใหม่) --</option>';
       }
     }
 
@@ -2527,9 +2538,15 @@
       dateSelect.innerHTML = '<option value="">-- กำลังดึงรอบเวลาตรวจนับ... --</option>';
 
       try {
-        const res = await callGasApi("getHistoryDates", { location: loc });
+        // ใช้ POST ป้องกันภาษาไทยเพี้ยนและ timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("หมดเวลาเชื่อมต่อ (Timeout 12s)")), 12000)
+        );
+        const fetchPromise = callGasApi("getHistoryDates", { location: loc }, "POST");
+        const res = await Promise.race([fetchPromise, timeoutPromise]);
+
         if (!res.dates || res.dates.length === 0) {
-          dateSelect.innerHTML = '<option value="">ไม่พบประวัติการตรวจนับ</option>';
+          dateSelect.innerHTML = '<option value="">-- ไม่พบประวัติการตรวจนับของคลังนี้ --</option>';
           return;
         }
         dateSelect.innerHTML = '<option value="">-- เลือกรอบวัน-เวลาที่ตรวจนับ --</option>';
@@ -2538,6 +2555,7 @@
         });
       } catch (err) {
         console.error("Load History Dates Error:", err);
+        dateSelect.innerHTML = `<option value="">⚠️ ดึงข้อมูลไม่สำเร็จ (${err.message}) - คลิกเลือกคลังใหม่อีกครั้ง</option>`;
       }
     }
 
@@ -2549,7 +2567,7 @@
 
       showLoading("กำลังดึงรายงาน...");
       try {
-        const res = await callGasApi("getHistoryReport", { location: loc, date: date });
+        const res = await callGasApi("getHistoryReport", { location: loc, date: date }, "POST");
         hideLoading();
         if (res && res.items) {
           renderReportView({
@@ -2576,7 +2594,7 @@
 
       showLoading("กำลังโหลดข้อมูลเพื่อแก้ไข...");
       try {
-        const res = await callGasApi("getHistoryReport", { location: loc, date: date });
+        const res = await callGasApi("getHistoryReport", { location: loc, date: date }, "POST");
         hideLoading();
         if (res && res.items && res.items.length > 0) {
           isEditMode = true;

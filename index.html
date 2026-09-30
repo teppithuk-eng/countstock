@@ -303,7 +303,7 @@
             <select id="statusFilterSelect" onchange="applyFilters()" class="w-full sm:w-40 bg-white border border-slate-300 focus:border-orange-500 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none shadow-sm">
               <option value="ALL">-- แสดงทั้งหมด --</option>
               <option value="DIFF_ONLY" class="text-amber-600 font-bold">⚡ ดูเฉพาะตัวไม่ตรง (Diff Only)</option>
-              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
+              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠️ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
               <option value="COUNTED" class="text-emerald-600 font-bold">✓ เช็คแล้ว (นับแล้ว)</option>
             </select>
 
@@ -628,16 +628,35 @@
         <p class="text-[10px] text-orange-600 font-semibold uppercase">Internal Warehouse & Sales Van Audit Report</p>
       </div>
       <div class="text-right text-[11px] leading-tight shrink-0">
-        <div><strong>รอบวันที่ตรวจนับ:</strong> <span id="rptDate">-</span></div>
-        <div><strong>วันที่-เวลาที่พิมพ์:</strong> <span id="rptPrintTime" class="font-bold text-slate-800">-</span></div>
-        <div><strong>ทะเบียนรถ/คลัง:</strong> <span id="rptVan" class="font-bold text-orange-600 text-sm">-</span></div>
+        <div><strong>รอบวันที่ตรวจนับ:</strong> <span id="rptDate">-</span>[cite: 2]</div>
+        <div><strong>วันที่-เวลาที่พิมพ์:</strong> <span id="rptPrintTime" class="font-bold text-slate-800">-</span>[cite: 2]</div>
+        <div><strong>ทะเบียนรถ/คลัง:</strong> <span id="rptVan" class="font-bold text-orange-600 text-sm">-</span>[cite: 2]</div>
+      </div>
+    </div>
+
+    <!-- แถบการ์ดสรุปยอดเงิน 3 ช่องหลัก (ตรงกับหน้าตรวจนับสต๊อก) -->
+    <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5 text-center">
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
+        <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">สต๊อกระบบ</div>
+        <div id="rptSumSysVal" class="text-xs sm:text-base font-black text-slate-800 mono-num mt-0.5 truncate">0.00 ฿</div>
+        <div id="rptSumSysQty" class="text-[10px] sm:text-xs text-slate-500 font-semibold mono-num truncate">รวม: 0 หน่วย</div>
+      </div>
+      <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-2.5 text-left">
+        <div class="text-[9px] sm:text-[10px] font-bold text-orange-700 uppercase truncate">นับได้จริง</div>
+        <div id="rptSumActVal" class="text-xs sm:text-base font-black text-orange-600 mono-num mt-0.5 truncate">0.00 ฿</div>
+        <div id="rptSumActQty" class="text-[10px] sm:text-xs text-orange-700 font-semibold mono-num truncate">นับ: 0 หน่วย</div>
+      </div>
+      <div id="rptDiffCard" class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-left">
+        <div class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">ผลต่าง (Diff)</div>
+        <div id="rptSumDiffVal" class="text-xs sm:text-base font-black text-slate-700 mono-num mt-0.5 truncate">0.00 ฿</div>
+        <div id="rptSumDiffQty" class="text-[10px] sm:text-xs text-slate-600 font-semibold mono-num truncate">ต่าง: 0 หน่วย</div>
       </div>
     </div>
 
     <div class="mb-3 border border-slate-300 rounded p-2 bg-slate-50">
       <div class="text-[10px] font-bold text-slate-800 mb-1 uppercase flex justify-between">
-        <span>📊 สรุปผลต่างจำนวนและมูลค่าสุทธิแยกตามกลุ่มสินค้า (ใช้สรุปยอดออกบิล/ชำระเงิน):</span>
-        <span class="text-[9px] text-slate-500 font-normal">สีแดง (-) = ขาดทุน/ต้องเปิดบิลเก็บเงิน | สีเขียว (+) = สินค้าเกิน | สีเทา/ดำ = ยอดพอดี</span>
+        <span>📊 สรุปผลต่างจำนวนและมูลค่าสุทธิแยกตามกลุ่มสินค้า (ใช้สรุปยอดออกบิล/ชำระเงิน):</span>[cite: 2]
+        <span class="text-[9px] text-slate-500 font-normal">สีแดง (-) = ขาดทุน/ต้องเปิดบิลเก็บเงิน | สีเขียว (+) = สินค้าเกิน | สีเทา/ดำ = ยอดพอดี</span>[cite: 2]
       </div>
       <div id="rptCategorySummary" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-[9px]"></div>
     </div>
@@ -2711,9 +2730,9 @@
       document.getElementById("printBlankSheetView").classList.add("hidden");
       document.getElementById("printReportView").classList.remove("hidden");
 
-      document.getElementById("rptDate").innerText = dateStr || formatDateTime(new Date());
-      document.getElementById("rptPrintTime").innerText = formatDateTime(new Date());
-      document.getElementById("rptVan").innerText = data.location;
+      document.getElementById("rptDate").innerText = dateStr || formatDateTime(new Date());[cite: 2]
+      document.getElementById("rptPrintTime").innerText = formatDateTime(new Date());[cite: 2]
+      document.getElementById("rptVan").innerText = data.location;[cite: 2]
       document.getElementById("rptSignAuditor").innerText = data.auditor ? `(${data.auditor})` : "(-ชื่อผู้นับ-)";
 
       const tbody = document.getElementById("rptTableBody");
@@ -2723,6 +2742,9 @@
       let totalSysVal = 0;
       let totalActVal = 0;
       let totalDiffVal = 0;
+
+      let totalSysUnits = 0;
+      let totalActUnits = 0;
 
       let grandTotalSysBox = 0;
       let grandTotalSysPcs = 0;
@@ -2802,6 +2824,9 @@
         totalActVal += actVal;
         totalDiffVal += diffVal;
 
+        totalSysUnits += Math.round(sysStockNum);
+        totalActUnits += Math.round(actDecimal);
+
         grandTotalSysBox += sysParsed.box;
         grandTotalSysPcs += sysParsed.pcs;
         grandTotalActBox += actBox;
@@ -2834,7 +2859,7 @@
           tbody.innerHTML += `
             <tr class="group-row-print border-y border-orange-200">
               <td colspan="14" class="px-2.5 py-1 text-left text-[10px] uppercase font-bold tracking-wide">
-                🏷️ กลุ่มสินค้า: ${currentGroup}
+                🏷️️ กลุ่มสินค้า: ${currentGroup}
               </td>
             </tr>
           `;
@@ -2879,6 +2904,43 @@
 
       if (currentGroup !== null) {
         appendGroupSubtotalRow(currentGroup, grpSysVal, grpActVal, grpDiffVal, grpSysBoxSum, grpSysPcsSum, grpActBoxSum, grpActPcsSum, grpDiffBoxSum, grpDiffPcsSum);
+      }
+
+      // แสดงยอดรวมในการ์ด 3 ช่องหลักของหน้ารายงาน
+      const rptSysValEl = document.getElementById("rptSumSysVal");
+      const rptActValEl = document.getElementById("rptSumActVal");
+      const rptDiffValEl = document.getElementById("rptSumDiffVal");
+      const rptSysQtyEl = document.getElementById("rptSumSysQty");
+      const rptActQtyEl = document.getElementById("rptSumActQty");
+      const rptDiffQtyEl = document.getElementById("rptSumDiffQty");
+      const rptDiffCard = document.getElementById("rptDiffCard");
+
+      if (rptSysValEl) rptSysValEl.innerText = totalSysVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+      if (rptActValEl) rptActValEl.innerText = totalActVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+      if (rptSysQtyEl) rptSysQtyEl.innerText = `รวม: ${totalSysUnits.toLocaleString()} หน่วย`;
+      if (rptActQtyEl) rptActQtyEl.innerText = `นับ: ${totalActUnits.toLocaleString()} หน่วย`;
+
+      const diffUnits = totalActUnits - totalSysUnits;
+      if (rptDiffQtyEl) {
+        const sign = diffUnits > 0 ? "+" : "";
+        rptDiffQtyEl.innerText = `ต่าง: ${sign}${diffUnits.toLocaleString()} หน่วย`;
+      }
+
+      if (rptDiffValEl) {
+        rptDiffValEl.innerText = (totalDiffVal > 0 ? "+" : "") + totalDiffVal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ฿";
+      }
+
+      if (rptDiffCard && rptDiffValEl) {
+        if (Math.abs(totalDiffVal) < 0.01) {
+          rptDiffCard.className = "bg-emerald-50/60 border border-emerald-200 rounded-xl p-2.5 text-left";
+          rptDiffValEl.className = "text-xs sm:text-base font-black text-emerald-700 mono-num mt-0.5 truncate";
+        } else if (totalDiffVal > 0) {
+          rptDiffCard.className = "bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-left";
+          rptDiffValEl.className = "text-xs sm:text-base font-black text-amber-700 mono-num mt-0.5 truncate";
+        } else {
+          rptDiffCard.className = "bg-rose-50/60 border border-rose-200 rounded-xl p-2.5 text-left";
+          rptDiffValEl.className = "text-xs sm:text-base font-black text-rose-700 mono-num mt-0.5 truncate";
+        }
       }
 
       tfoot.innerHTML = `

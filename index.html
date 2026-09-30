@@ -162,7 +162,7 @@
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
-        <span class="text-base">✏️</span>
+        <span class="text-base">✏️️</span>
         <span>โหมดแก้ไขย้อนหลัง: รอบ <span id="editModeDateText" class="text-sky-950 font-black underline"></span> คลัง <span id="editModeLocText" class="text-sky-950 font-black underline"></span></span>
       </div>
       <button onclick="cancelEditMode()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
@@ -303,7 +303,7 @@
             <select id="statusFilterSelect" onchange="applyFilters()" class="w-full sm:w-40 bg-white border border-slate-300 focus:border-orange-500 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none shadow-sm">
               <option value="ALL">-- แสดงทั้งหมด --</option>
               <option value="DIFF_ONLY" class="text-amber-600 font-bold">⚡ ดูเฉพาะตัวไม่ตรง (Diff Only)</option>
-              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠️️ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
+              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
               <option value="COUNTED" class="text-emerald-600 font-bold">✓ เช็คแล้ว (นับแล้ว)</option>
             </select>
 
@@ -2918,7 +2918,7 @@
           } else {
             const b = Math.trunc(dPcs / pSize);
             const p = Math.abs(dPcs % pSize);
-            const bSign = dPcs > 0 ? "+" : (diffPcs < 0 && b === 0 ? "-" : "");
+            const bSign = dPcs > 0 ? "+" : (dPcs < 0 && b === 0 ? "-" : "");
             countText = `${bSign}${b}ก. ` + (p > 0 ? `${p}ช.` : "");
           }
 

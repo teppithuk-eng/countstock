@@ -162,7 +162,7 @@
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
-        <span class="text-base">✏️️</span>
+        <span class="text-base">✏️</span>
         <span>โหมดแก้ไขย้อนหลัง: รอบ <span id="editModeDateText" class="text-sky-950 font-black underline"></span> คลัง <span id="editModeLocText" class="text-sky-950 font-black underline"></span></span>
       </div>
       <button onclick="cancelEditMode()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
@@ -447,13 +447,16 @@
       </div>
     </div>
 
-    <!-- TAB 2: ค้นหาและพิมพ์ย้อนหลัง -->
+    <!-- TAB 2: ค้นหาและพิมพ์ย้อนหลัง (ปรับปรุงใหม่: มีปุ่มดึงยอดล่าสุดทันที ไม่ค้าง) -->
     <div id="tabPrintContent" class="hidden">
       <div class="space-y-3 bg-slate-50 border border-slate-200 p-3 sm:p-4 rounded-2xl text-xs sm:text-sm mb-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">เลือกทะเบียนรถ / คลังสาขาที่มีประวัติบันทึกแล้ว</label>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-bold text-slate-700">เลือกทะเบียนรถ / คลังสาขา (Target Location)</label>
+            <button onclick="initPrintTab()" class="text-[11px] text-orange-600 hover:underline font-bold">🔄 รีเฟรชรายชื่อคลัง</button>
+          </div>
           <select id="histLocSelect" onchange="loadHistoryDates()" class="w-full bg-white border border-slate-300 focus:border-orange-500 rounded-xl p-2 text-slate-800 text-xs sm:text-sm focus:outline-none">
-            <option value="">-- กำลังโหลดรายการที่มีประวัติ... --</option>
+            <option value="">-- กำลังโหลดรายการคลัง... --</option>
           </select>
         </div>
         <div>
@@ -471,6 +474,28 @@
             ✏️ <span>ดึงรายการกลับไปแก้ไข (Edit)</span>
           </button>
         </div>
+
+        <!-- ⚡ แถบด่วนพิเศษ: ดึงประวัติที่เพิ่งนับล่าสุดทันที ไม่ต้องรอง้อ Dropdown -->
+        <div id="quickRecentBox" class="hidden mt-3 pt-2.5 border-t border-slate-200">
+          <div class="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
+            <span>⚡ รอบที่เพิ่งตรวจนับล่าสุดบนเครื่องนี้:</span>
+          </div>
+          <div class="flex items-center justify-between bg-white border border-orange-200 rounded-xl p-2">
+            <div>
+              <span id="quickRecentLoc" class="font-bold text-orange-700 text-xs"></span>
+              <span id="quickRecentDate" class="text-[10px] text-slate-500 block"></span>
+            </div>
+            <div class="flex gap-1.5">
+              <button onclick="quickOpenRecentReport()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition">
+                🖨️ ดูรายงาน
+              </button>
+              <button onclick="quickEditRecentReport()" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition">
+                ✏️ แก้ไข
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -724,7 +749,7 @@
 
     <div class="mt-6 text-center space-x-3 no-print">
       <button onclick="handlePrintReport('rptPrintTime')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs tracking-wider uppercase shadow-md transition">
-        🖨️ สั่งพิมพ์ / บันทึกเป็น PDF
+        🖨️️ สั่งพิมพ์ / บันทึกเป็น PDF
       </button>
       <button onclick="backToApp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-5 rounded-xl text-xs border border-slate-200 transition">
         🔙 ย้อนกลับหน้าหลัก
@@ -873,7 +898,6 @@
     window.addEventListener('touchstart', unlockAudioEngine, { once: true });
     window.addEventListener('click', unlockAudioEngine, { once: true });
 
-    // 1. เสียงตี๊ดสำเร็จ (คลื่น Sine นุ่มนวล ไม่แตกซ่า)
     function playSuccessBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -897,7 +921,6 @@
       } catch(e) {}
     }
 
-    // 2. เสียงเตือนข้อผิดพลาด (นุ่ม ไม่บาดหู)
     function playErrorBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -931,7 +954,6 @@
       } catch(e) {}
     }
 
-    // 3. ฟังก์ชันขานเสียงตัวเลขภาษาไทย
     function speakText(text) {
       try {
         if (!('speechSynthesis' in window)) return;
@@ -963,9 +985,6 @@
       }
     }
 
-    // ==========================================
-    // 💡 TORCH / FLASHLIGHT CONTROL
-    // ==========================================
     async function toggleTorchLight() {
       try {
         if (!videoTrack) {
@@ -991,32 +1010,31 @@
     }
 
     // ==========================================
-    // 🚀 BRIDGE API: สื่อสารกับ Google Apps Script
+    // 🚀 BRIDGE API: สื่อสารกับ Google Apps Script (ยิง 2 ระบบ GET/POST Auto)
     // ==========================================
-    async function callGasApi(action, params = {}, method = "GET") {
+    async function callGasApi(action, params = {}, method = "AUTO") {
+      const payloadData = { action, ...params };
+
+      if (method === "GET" || method === "AUTO") {
+        try {
+          const query = new URLSearchParams(payloadData).toString();
+          const res = await fetch(`${GAS_API_URL}?${query}`, { method: 'GET' });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch(e) {
+          if (method === "GET") throw e;
+        }
+      }
+
       try {
-        if (method === "GET") {
-          const query = new URLSearchParams({ action, ...params }).toString();
-          const res = await fetch(`${GAS_API_URL}?${query}`);
-          return await res.json();
-        } else {
-          const res = await fetch(GAS_API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action, payload: params })
-          });
-          return await res.json();
-        }
+        const res = await fetch(GAS_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: action, payload: params, ...payloadData })
+        });
+        return await res.json();
       } catch (err) {
-        // Fallback: หาก GET ล้มเหลวจากปัญหา Encoding/CORS ให้ลอง POST ให้อัตโนมัติ
-        if (method === "GET") {
-          try {
-            const resPost = await fetch(GAS_API_URL, {
-              method: "POST",
-              body: JSON.stringify({ action, payload: params })
-            });
-            return await resPost.json();
-          } catch(e) {}
-        }
         throw new Error("ติดต่อ Google Apps Script ไม่สำเร็จ: " + err.message);
       }
     }
@@ -1105,6 +1123,7 @@
       }
       document.getElementById("mainApp").classList.remove("hidden");
       initCountTab();
+      checkQuickRecent();
     }
 
     function logout() {
@@ -1154,6 +1173,7 @@
         tabPrintContent.classList.remove("hidden");
         tabCountContent.classList.add("hidden");
         initPrintTab();
+        checkQuickRecent();
         stopScanner();
       }
     }
@@ -1197,9 +1217,6 @@
       }
     }
 
-    // ==========================================
-    // ⚙️ PARSE STOCK VALUE (แก้ไขหน่วย EA ไม่แสดงยอดระบบ)
-    // ==========================================
     function parseStockValue(decimalVal, packSize) {
       if (decimalVal === null || decimalVal === undefined || isNaN(decimalVal)) {
         return { box: 0, pcs: 0, totalPcs: 0 };
@@ -2052,9 +2069,6 @@
       }
     }
 
-    // ==========================================
-    // ⌨️ MANUAL SCAN ENGINE IN CAMERA MODAL
-    // ==========================================
     function handleManualScanKey(event) {
       if (event.key === "Enter") {
         submitManualScan();
@@ -2069,9 +2083,6 @@
       inputEl.value = "";
     }
 
-    // ==========================================
-    // 📷 SCAN & ACKNOWLEDGE ENGINE (มาตรฐานสากล)
-    // ==========================================
     function processBarcodeCount(barcode) {
       if (isScanFrozen) return;
 
@@ -2458,6 +2469,13 @@
         if (res && res.success) {
           clearDraftData();
 
+          // เก็บข้อมูลล่าสุดไว้ในเครื่องสำหรับเปิดดูด่วนทันที ไม่ต้องรอนาน
+          localStorage.setItem("wsg_latest_saved_report", JSON.stringify({
+            location: location,
+            date: res.timestamp,
+            payload: payload
+          }));
+
           await sendAuditReportToLine(payload, res.timestamp);
           alert(isEditMode ? "อัปเดตการแก้ไขสต๊อกสำเร็จเรียบร้อยแล้ว!" : (onlyCurrentGroup ? `บันทึกกลุ่ม "${selectedGroup}" สำเร็จแล้ว!` : "บันทึกข้อมูลทุกรายการสำเร็จเรียบร้อยแล้ว!"));
           isEditMode = false;
@@ -2504,25 +2522,45 @@
       document.getElementById("customAlertModal").classList.add("hidden");
     }
 
+    // ==========================================
+    // 🖨️ TAB 2: ดึงประวัติที่รวดเร็ว ฉลาด และไม่ติดค้าง
+    // ==========================================
     async function initPrintTab() {
       const select = document.getElementById("histLocSelect");
       const dateSelect = document.getElementById("histDateSelect");
-      select.innerHTML = '<option value="">-- กำลังโหลดรายการที่มีประวัติ... --</option>';
       dateSelect.innerHTML = '<option value="">-- กรุณาเลือกทะเบียนรถ/คลังก่อน --</option>';
 
-      try {
-        const res = await callGasApi("getHistoryLocations", {}, "POST");
-        if (!res.locations || res.locations.length === 0) {
-          select.innerHTML = '<option value="">-- ไม่พบประวัติการตรวจนับในระบบ --</option>';
-          return;
+      // ดึงรายชื่อคลังจาก Dropdown หน้าแรกที่มีอยู่แล้วมาใช้งานได้ทันที ไม่ต้องรอเน็ต
+      const mainLocSelect = document.getElementById("locSelect");
+      if (mainLocSelect && mainLocSelect.options.length > 1) {
+        select.innerHTML = '<option value="">-- เลือกทะเบียนรถ / คลังสาขา --</option>';
+        for (let i = 1; i < mainLocSelect.options.length; i++) {
+          const val = mainLocSelect.options[i].value;
+          select.innerHTML += `<option value="${val}">${val}</option>`;
         }
-        select.innerHTML = '<option value="">-- เลือกทะเบียนรถ / คลังสาขาที่มีประวัติ --</option>';
-        res.locations.forEach(loc => {
-          select.innerHTML += `<option value="${loc}">${loc}</option>`;
-        });
+        // เลือกรถ/คลังเดียวกับหน้าแรกให้แบบอัตโนมัติ
+        if (mainLocSelect.value) {
+          select.value = mainLocSelect.value;
+          loadHistoryDates();
+        }
+        return;
+      }
+
+      // หากหน้าแรกยังไม่โหลด ให้ขอ API จากระบบ
+      select.innerHTML = '<option value="">-- กำลังโหลดรายการคลัง... --</option>';
+      try {
+        const res = await callGasApi("getLocations", {}, "AUTO");
+        if (res && res.locations && res.locations.length > 0) {
+          select.innerHTML = '<option value="">-- เลือกทะเบียนรถ / คลังสาขา --</option>';
+          res.locations.forEach(loc => {
+            select.innerHTML += `<option value="${loc}">${loc}</option>`;
+          });
+        } else {
+          select.innerHTML = '<option value="">-- ไม่พบรายการคลังในระบบ --</option>';
+        }
       } catch (err) {
         console.error("Init Print Tab Error:", err);
-        select.innerHTML = '<option value="">-- โหลดรายการไม่สำเร็จ (กดสลับแท็บเพื่อลองใหม่) --</option>';
+        select.innerHTML = '<option value="">⚠️ โหลดไม่สำเร็จ (กดรีเฟรชด้านบนเพื่อลองใหม่)</option>';
       }
     }
 
@@ -2538,14 +2576,13 @@
       dateSelect.innerHTML = '<option value="">-- กำลังดึงรอบเวลาตรวจนับ... --</option>';
 
       try {
-        // ใช้ POST ป้องกันภาษาไทยเพี้ยนและ timeout
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error("หมดเวลาเชื่อมต่อ (Timeout 12s)")), 12000)
         );
-        const fetchPromise = callGasApi("getHistoryDates", { location: loc }, "POST");
+        const fetchPromise = callGasApi("getHistoryDates", { location: loc }, "AUTO");
         const res = await Promise.race([fetchPromise, timeoutPromise]);
 
-        if (!res.dates || res.dates.length === 0) {
+        if (!res || !res.dates || res.dates.length === 0) {
           dateSelect.innerHTML = '<option value="">-- ไม่พบประวัติการตรวจนับของคลังนี้ --</option>';
           return;
         }
@@ -2555,7 +2592,7 @@
         });
       } catch (err) {
         console.error("Load History Dates Error:", err);
-        dateSelect.innerHTML = `<option value="">⚠️ ดึงข้อมูลไม่สำเร็จ (${err.message}) - คลิกเลือกคลังใหม่อีกครั้ง</option>`;
+        dateSelect.innerHTML = `<option value="">⚠️ ดึงข้อมูลไม่สำเร็จ (${err.message}) - ลองกดเลือกใหม่อีกครั้ง</option>`;
       }
     }
 
@@ -2567,7 +2604,7 @@
 
       showLoading("กำลังดึงรายงาน...");
       try {
-        const res = await callGasApi("getHistoryReport", { location: loc, date: date }, "POST");
+        const res = await callGasApi("getHistoryReport", { location: loc, date: date }, "AUTO");
         hideLoading();
         if (res && res.items) {
           renderReportView({
@@ -2594,7 +2631,7 @@
 
       showLoading("กำลังโหลดข้อมูลเพื่อแก้ไข...");
       try {
-        const res = await callGasApi("getHistoryReport", { location: loc, date: date }, "POST");
+        const res = await callGasApi("getHistoryReport", { location: loc, date: date }, "AUTO");
         hideLoading();
         if (res && res.items && res.items.length > 0) {
           isEditMode = true;
@@ -2638,6 +2675,62 @@
         hideLoading();
         alert("เกิดข้อผิดพลาดในการดึงข้อมูล: " + err.message);
       }
+    }
+
+    // ==========================================
+    // ⚡ ฟังก์ชันดึงประวัติล่าสุดด่วนในเครื่อง (ไม่ต้องรอเน็ต)
+    // ==========================================
+    function checkQuickRecent() {
+      const recentBox = document.getElementById("quickRecentBox");
+      const savedRaw = localStorage.getItem("wsg_latest_saved_report");
+      if (!savedRaw) {
+        recentBox.classList.add("hidden");
+        return;
+      }
+      try {
+        const data = JSON.parse(savedRaw);
+        document.getElementById("quickRecentLoc").innerText = data.location;
+        document.getElementById("quickRecentDate").innerText = "รอบเวลา: " + data.date;
+        recentBox.classList.remove("hidden");
+      } catch(e) {
+        recentBox.classList.add("hidden");
+      }
+    }
+
+    function quickOpenRecentReport() {
+      const savedRaw = localStorage.getItem("wsg_latest_saved_report");
+      if (!savedRaw) return;
+      const data = JSON.parse(savedRaw);
+      renderReportView(data.payload, data.date);
+    }
+
+    function quickEditRecentReport() {
+      const savedRaw = localStorage.getItem("wsg_latest_saved_report");
+      if (!savedRaw) return;
+      const data = JSON.parse(savedRaw);
+
+      isEditMode = true;
+      originalAuditDate = data.date;
+
+      switchTab('count');
+
+      document.getElementById("locSelect").value = data.location;
+      document.getElementById("auditorInput").value = data.payload.auditor || "";
+
+      document.getElementById("editModeAlert").classList.remove("hidden");
+      document.getElementById("editModeDateText").innerText = data.date;
+      document.getElementById("editModeLocText").innerText = data.location;
+
+      currentItems = data.payload.items.map(item => ({
+        ...item,
+        sysStock: Number(item.sysStock) || 0
+      }));
+
+      renderPreAuditSummary(data.location);
+      document.getElementById("tableContainer").classList.remove("hidden");
+      populateGroupFilter();
+      renderTable();
+      document.getElementById("tableContainer").scrollIntoView({ behavior: 'smooth' });
     }
 
     function cancelEditMode() {
@@ -2887,7 +2980,7 @@
           tbody.innerHTML += `
             <tr class="group-row-print border-y border-orange-200">
               <td colspan="14" class="px-2.5 py-1 text-left text-[10px] uppercase font-bold tracking-wide">
-                🏷️ กลุ่มสินค้า: ${currentGroup}
+                🏷️️ กลุ่มสินค้า: ${currentGroup}
               </td>
             </tr>
           `;
@@ -3008,7 +3101,7 @@
           } else {
             const b = Math.trunc(dPcs / pSize);
             const p = Math.abs(dPcs % pSize);
-            const bSign = dPcs > 0 ? "+" : (dPcs < 0 && b === 0 ? "-" : "");
+            const bSign = dPcs > 0 ? "+" : (diffPcs < 0 && b === 0 ? "-" : "");
             countText = `${bSign}${b}ก. ` + (p > 0 ? `${p}ช.` : "");
           }
 

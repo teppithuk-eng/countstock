@@ -303,7 +303,7 @@
             <select id="statusFilterSelect" onchange="applyFilters()" class="w-full sm:w-40 bg-white border border-slate-300 focus:border-orange-500 rounded-xl px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none shadow-sm">
               <option value="ALL">-- แสดงทั้งหมด --</option>
               <option value="DIFF_ONLY" class="text-amber-600 font-bold">⚡ ดูเฉพาะตัวไม่ตรง (Diff Only)</option>
-              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠️ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
+              <option value="UNCOUNTED" class="text-rose-600 font-bold">⚠️️ ยังไม่ถูกเช็ค (ยังไม่นับ)</option>
               <option value="COUNTED" class="text-emerald-600 font-bold">✓ เช็คแล้ว (นับแล้ว)</option>
             </select>
 
@@ -1163,7 +1163,6 @@
       }
       const val = Number(decimalVal);
       if (packSize <= 1) {
-        // หากเป็นหน่วย EA ให้ใส่จำนวนเต็มไว้ที่ box เพื่อให้ตารางดึงไปแสดงผล ${sysParsed.box} EA
         return { box: Math.round(val), pcs: 0, totalPcs: Math.round(val) };
       }
       const box = Math.floor(val);
@@ -1313,17 +1312,20 @@
 
     function populateGroupFilter() {
       const groupSelect = document.getElementById("groupFilterSelect");
+      const currentSelected = groupSelect ? groupSelect.value : "ALL";
       const groups = new Set();
       currentItems.forEach(i => {
         if (i.itemGroup) groups.add(i.itemGroup);
       });
-      const sortedGroups = Array.from(groups).sort((a, b) => a.localeCompare(b, 'th'));
+      const sortedGroups = Array.from(groups).sort((a, b) => (a || '').localeCompare(b || '', 'th'));
 
       groupSelect.innerHTML = '<option value="ALL">-- สินค้าทุกกลุ่ม (ทั้งหมด) --</option>';
       sortedGroups.forEach(g => {
         groupSelect.innerHTML += `<option value="${g}">🏷️ ${g}</option>`;
       });
-      document.getElementById("searchInput").value = "";
+      if (groups.has(currentSelected)) {
+        groupSelect.value = currentSelected;
+      }
     }
 
     function applyFilters() {
@@ -2049,6 +2051,16 @@
         speakText(currentCount);
         updateFeedbackCard(currentItems[idx]);
         showScanNotification(currentItems[idx].itemCode, currentItems[idx].itemName);
+        
+        if (currentCountMode === 'focus') {
+          const filtered = getFilteredItemsWithIndices();
+          const fIndex = filtered.findIndex(f => f.originalIndex === idx);
+          if (fIndex !== -1) {
+            currentFocusIndex = fIndex;
+            renderFocusCard();
+          }
+        }
+        
         autoSaveDraft();
         return;
       }
@@ -2094,20 +2106,42 @@
         actBox: 1,
         actPcs: 0,
         diffDecimal: 1,
-        remark: "สินค้าเกินนอกระบบ",
+        remark: "ไม่มีเลขในระบบ",
         isExtra: true
       });
 
       speakText(1);
 
-      currentItems.sort((a, b) => a.itemGroup.localeCompare(b.itemGroup, 'th'));
+      // เรียงลำดับรายการโดยป้องกันค่า undefined อย่างสมบูรณ์
+      currentItems.sort((a, b) => (a.itemGroup || '').localeCompare(b.itemGroup || '', 'th'));
+      
+      // ปลดตัวกรองเพื่อให้มองเห็นไอเทมใหม่ทันที
+      const groupFilter = document.getElementById("groupFilterSelect");
+      const statusFilter = document.getElementById("statusFilterSelect");
+      const searchInput = document.getElementById("searchInput");
+      if (groupFilter) groupFilter.value = "ALL";
+      if (statusFilter && statusFilter.value === "UNCOUNTED") statusFilter.value = "ALL";
+      if (searchInput) searchInput.value = "";
+
       populateGroupFilter();
       renderTable();
       highlightRow(masterItemCode);
 
       lastScannedItemIndex = currentItems.findIndex(i => i.itemCode === masterItemCode);
-      updateFeedbackCard(currentItems[lastScannedItemIndex]);
+      if (lastScannedItemIndex !== -1) {
+        updateFeedbackCard(currentItems[lastScannedItemIndex]);
+      }
       showScanNotification(masterItemCode, foundInMaster.name);
+
+      if (currentCountMode === 'focus') {
+        const filtered = getFilteredItemsWithIndices();
+        const fIndex = filtered.findIndex(f => f.item.itemCode === masterItemCode);
+        if (fIndex !== -1) {
+          currentFocusIndex = fIndex;
+        }
+        renderFocusCard();
+      }
+
       autoSaveDraft();
     }
 
@@ -2884,7 +2918,7 @@
           } else {
             const b = Math.trunc(dPcs / pSize);
             const p = Math.abs(dPcs % pSize);
-            const bSign = dPcs > 0 ? "+" : (dPcs < 0 && b === 0 ? "-" : "");
+            const bSign = dPcs > 0 ? "+" : (diffPcs < 0 && b === 0 ? "-" : "");
             countText = `${bSign}${b}ก. ` + (p > 0 ? `${p}ช.` : "");
           }
 

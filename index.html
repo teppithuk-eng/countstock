@@ -87,7 +87,7 @@
   </div>
 
   <!-- 1. กล่อง Login -->
-  <div id="loginBox" class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl shadow-xl p-8 text-center no-print relative overflow-hidden hidden">
+  <div id="loginBox" class="w-full max-w-sm bg-white border border-slate-200 rounded-3xl shadow-xl p-8 text-center no-print relative overflow-hidden">
     <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600"></div>
     <div class="mb-4">
       <div class="text-2xl font-black tracking-wider text-slate-900 uppercase">Winsome Green</div>
@@ -162,7 +162,7 @@
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
-        <span class="text-base">✏</span>
+        <span class="text-base">✏️</span>
         <span>โหมดแก้ไขย้อนหลัง: รอบ <span id="editModeDateText" class="text-sky-950 font-black underline"></span> คลัง <span id="editModeLocText" class="text-sky-950 font-black underline"></span></span>
       </div>
       <button onclick="cancelEditMode()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
@@ -628,9 +628,9 @@
         <p class="text-[10px] text-orange-600 font-semibold uppercase">Internal Warehouse & Sales Van Audit Report</p>
       </div>
       <div class="text-right text-[11px] leading-tight shrink-0">
-        <div><strong>รอบวันที่ตรวจนับ:</strong> <span id="rptDate">-</span>[cite: 2]</div>
-        <div><strong>วันที่-เวลาที่พิมพ์:</strong> <span id="rptPrintTime" class="font-bold text-slate-800">-</span>[cite: 2]</div>
-        <div><strong>ทะเบียนรถ/คลัง:</strong> <span id="rptVan" class="font-bold text-orange-600 text-sm">-</span>[cite: 2]</div>
+        <div><strong>รอบวันที่ตรวจนับ:</strong> <span id="rptDate">-</span></div>
+        <div><strong>วันที่-เวลาที่พิมพ์:</strong> <span id="rptPrintTime" class="font-bold text-slate-800">-</span></div>
+        <div><strong>ทะเบียนรถ/คลัง:</strong> <span id="rptVan" class="font-bold text-orange-600 text-sm">-</span></div>
       </div>
     </div>
 
@@ -655,8 +655,8 @@
 
     <div class="mb-3 border border-slate-300 rounded p-2 bg-slate-50">
       <div class="text-[10px] font-bold text-slate-800 mb-1 uppercase flex justify-between">
-        <span>📊 สรุปผลต่างจำนวนและมูลค่าสุทธิแยกตามกลุ่มสินค้า (ใช้สรุปยอดออกบิล/ชำระเงิน):</span>[cite: 2]
-        <span class="text-[9px] text-slate-500 font-normal">สีแดง (-) = ขาดทุน/ต้องเปิดบิลเก็บเงิน | สีเขียว (+) = สินค้าเกิน | สีเทา/ดำ = ยอดพอดี</span>[cite: 2]
+        <span>📊 สรุปผลต่างจำนวนและมูลค่าสุทธิแยกตามกลุ่มสินค้า (ใช้สรุปยอดออกบิล/ชำระเงิน):</span>
+        <span class="text-[9px] text-slate-500 font-normal">สีแดง (-) = ขาดทุน/ต้องเปิดบิลเก็บเงิน | สีเขียว (+) = สินค้าเกิน | สีเทา/ดำ = ยอดพอดี</span>
       </div>
       <div id="rptCategorySummary" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-[9px]"></div>
     </div>
@@ -1011,17 +1011,9 @@
       }
     }
 
-    window.addEventListener("DOMContentLoaded", async () => {
-      try {
-        await Promise.race([
-          initializeLiff(),
-          new Promise((resolve) => setTimeout(resolve, 3000))
-        ]);
-      } catch (e) {
-        console.warn("Init timeout/error:", e);
-      } finally {
-        checkAutoLogin();
-      }
+    window.addEventListener("DOMContentLoaded", () => {
+      checkAutoLogin();
+      initializeLiff();
     });
 
     async function initializeLiff() {
@@ -1063,6 +1055,7 @@
         }
       }
       document.getElementById("loginBox").classList.remove("hidden");
+      document.body.classList.add("justify-center");
     }
 
     async function verifyPass() {
@@ -2141,10 +2134,8 @@
 
       speakText(1);
 
-      // เรียงลำดับรายการโดยป้องกันค่า undefined อย่างสมบูรณ์
       currentItems.sort((a, b) => (a.itemGroup || '').localeCompare(b.itemGroup || '', 'th'));
       
-      // ปลดตัวกรองเพื่อให้มองเห็นไอเทมใหม่ทันที
       const groupFilter = document.getElementById("groupFilterSelect");
       const statusFilter = document.getElementById("statusFilterSelect");
       const searchInput = document.getElementById("searchInput");
@@ -2209,11 +2200,9 @@
       document.getElementById("scanCardName").innerText = item.itemName;
       document.getElementById("scanCardUom").innerText = item.uom || 'EA';
 
-      // แสดงยอดระบบที่ถูกต้อง
       const sysDisplay = isEA ? `${sysParsed.box} EA` : `${sysParsed.box} กล่อง` + (sysParsed.pcs > 0 ? ` +${sysParsed.pcs}ชิ้น` : "");
       document.getElementById("scanCardSysQty").innerText = sysDisplay;
 
-      // แสดงยอดนับจริง
       document.getElementById("scanCardQtyInput").value = item.actBox || 0;
     }
 
@@ -2740,9 +2729,9 @@
       document.getElementById("printBlankSheetView").classList.add("hidden");
       document.getElementById("printReportView").classList.remove("hidden");
 
-      document.getElementById("rptDate").innerText = dateStr || formatDateTime(new Date());[cite: 2]
-      document.getElementById("rptPrintTime").innerText = formatDateTime(new Date());[cite: 2]
-      document.getElementById("rptVan").innerText = data.location;[cite: 2]
+      document.getElementById("rptDate").innerText = dateStr || formatDateTime(new Date());
+      document.getElementById("rptPrintTime").innerText = formatDateTime(new Date());
+      document.getElementById("rptVan").innerText = data.location;
       document.getElementById("rptSignAuditor").innerText = data.auditor ? `(${data.auditor})` : "(-ชื่อผู้นับ-)";
 
       const tbody = document.getElementById("rptTableBody");

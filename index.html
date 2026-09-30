@@ -162,7 +162,7 @@
     <!-- แถบแจ้งเตือนโหมดแก้ไขย้อนหลัง -->
     <div id="editModeAlert" class="hidden mb-3 bg-sky-50 border border-sky-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-sky-800 text-[11px] sm:text-xs font-bold">
-        <span class="text-base">✏️️</span>
+        <span class="text-base">✏</span>
         <span>โหมดแก้ไขย้อนหลัง: รอบ <span id="editModeDateText" class="text-sky-950 font-black underline"></span> คลัง <span id="editModeLocText" class="text-sky-950 font-black underline"></span></span>
       </div>
       <button onclick="cancelEditMode()" class="text-[10px] sm:text-xs bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold transition">
@@ -1012,8 +1012,16 @@
     }
 
     window.addEventListener("DOMContentLoaded", async () => {
-      await initializeLiff();
-      checkAutoLogin();
+      try {
+        await Promise.race([
+          initializeLiff(),
+          new Promise((resolve) => setTimeout(resolve, 3000))
+        ]);
+      } catch (e) {
+        console.warn("Init timeout/error:", e);
+      } finally {
+        checkAutoLogin();
+      }
     });
 
     async function initializeLiff() {
@@ -1038,6 +1046,7 @@
     }
 
     function checkAutoLogin() {
+      hideLoading();
       const authSession = localStorage.getItem("wsg_auth_session");
       if (authSession) {
         try {
@@ -1077,6 +1086,7 @@
     }
 
     function unlockApp() {
+      hideLoading();
       document.getElementById("loginBox").classList.add("hidden");
       document.body.classList.remove("justify-center");
       document.getElementById("mainApp").classList.remove("hidden");
@@ -2859,7 +2869,7 @@
           tbody.innerHTML += `
             <tr class="group-row-print border-y border-orange-200">
               <td colspan="14" class="px-2.5 py-1 text-left text-[10px] uppercase font-bold tracking-wide">
-                🏷️️ กลุ่มสินค้า: ${currentGroup}
+                🏷️ กลุ่มสินค้า: ${currentGroup}
               </td>
             </tr>
           `;
